@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/boardinghub
+    username: postgres
+    password: Kd14637
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: true
+
+jwt:
+  secret: mySecretKeyWithAtLeast32CharactersLongForHS256!!
+  expiration: 3600000
