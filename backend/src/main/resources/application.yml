@@ -1,16 +1,24 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/boardinghub
-    username: postgres
-    password: Kd14637
+    url: jdbc:postgresql://${SUPABASE_HOST}:${SUPABASE_PORT}/${SUPABASE_DB}?sslmode=require
+    username: ${SUPABASE_USER}
+    password: ${SUPABASE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: update          
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          lob:
+            non_contextual_creation: true
     show-sql: true
 
 jwt:
-  secret: mySecretKeyWithAtLeast32CharactersLongForHS256!!
+  secret: ${JWT_SECRET:mySuperSecretKeyWithAtLeast32CharactersLongForHS256!!}
   expiration: 3600000
+
+app:
+  cors:
+    allowed-origins: http://localhost:3000,http://localhost:3001
