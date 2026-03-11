@@ -26,3 +26,5 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 endlocal
+
+### Note: To run: .\run.cmd

@@ -34,3 +34,8 @@ build/
 
 ### Environment ###
 .env
+
+### Run ###
+run.cmd
+start.ps1
+build.cmd

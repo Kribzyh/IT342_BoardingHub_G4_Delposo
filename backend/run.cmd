@@ -14,3 +14,4 @@ echo Database: %SUPABASE_HOST%
 echo Port: 8080
 echo.
 java -jar target/app-0.0.1-SNAPSHOT.jar
+

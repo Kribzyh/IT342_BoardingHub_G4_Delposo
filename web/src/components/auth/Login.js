@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useGoogleLogin } from '@react-oauth/google';
 import { login } from '../../services/auth';
 import './Login.css';
 
@@ -15,11 +16,34 @@ const Login = () => {
       const data = await login(email, password);
       localStorage.setItem('token', data.accessToken);
       localStorage.setItem('user', JSON.stringify(data.user));
-      navigate('/dashboard'); // redirect after login
+      navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data || 'Login failed');
     }
   };
+
+  const googleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      try {
+        const res = await fetch('http://localhost:8080/auth/google', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: tokenResponse.access_token }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          localStorage.setItem('token', data.accessToken);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          navigate('/dashboard');
+        } else {
+          setError(data.message || 'Google login failed');
+        }
+      } catch (err) {
+        setError('Google login failed');
+      }
+    },
+    onError: () => setError('Google login failed'),
+  });
 
   return (
     <div className="login-container">
@@ -46,6 +70,10 @@ const Login = () => {
         </div>
         <button type="submit">Login</button>
       </form>
+      <div className="divider">OR</div>
+      <button onClick={() => googleLogin()} className="google-btn">
+        Sign in with Google
+      </button>
       <p>
         Don't have an account? <a href="/register">Register</a>
       </p>
