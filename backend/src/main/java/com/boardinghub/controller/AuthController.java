@@ -80,6 +80,7 @@ public class AuthController {
         // Only required for first-time Google users (when the email is not present in the DB yet).
         String fullName = request.get("fullName");
         String role = request.get("role");
+        boolean wasRoleProvided = role != null && !role.isBlank();
         if (role == null || role.isBlank()) {
             role = "TENANT";
         }
@@ -119,13 +120,7 @@ public class AuthController {
                 }
                 user = userRepository.save(user);
             } else {
-                // Update role if a specific role was provided
-                try {
-                    user.setRole(User.Role.valueOf(role));
-                    user = userRepository.save(user);
-                } catch (IllegalArgumentException e) {
-                    // Keep existing role if invalid role provided
-                }
+                // Role is set during first login and not updated for existing users
             }
 
             String jwt = jwtUtil.generateToken(user.getEmail());
