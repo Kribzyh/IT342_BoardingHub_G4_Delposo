@@ -1,5 +1,5 @@
 .App {
-  text-align: center;
+  text-align: left;
 }
 
 .App-logo {
@@ -35,4 +35,27 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+.dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f4f7fb;
+}
+
+.dashboard-content {
+  flex: 1;
+  padding: 30px;
+}
+
+.dashboard-content h1 {
+  margin: 0;
+}
+
+.dashboard-card {
+  margin-top: 22px;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08);
 }
