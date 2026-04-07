@@ -8,11 +8,17 @@ import com.boardinghub.dto.UpdateRoomRequest;
 import com.boardinghub.entity.Property;
 import com.boardinghub.entity.Room;
 import com.boardinghub.entity.User;
+import com.boardinghub.event.RoomCodeGeneratedEvent;
+import com.boardinghub.event.TenantEnrolledEvent;
+import com.boardinghub.factory.PropertyFactory;
+import com.boardinghub.factory.RoomFactory;
 import com.boardinghub.repository.PropertyRepository;
 import com.boardinghub.repository.RoomRepository;
 import com.boardinghub.repository.UserRepository;
+import com.boardinghub.strategy.CodeGenerationStrategy;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -20,7 +26,6 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.Random;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +33,10 @@ public class PropertyRoomService {
     private final PropertyRepository propertyRepository;
     private final RoomRepository roomRepository;
     private final UserRepository userRepository;
+    private final PropertyFactory propertyFactory;
+    private final RoomFactory roomFactory;
+    private final CodeGenerationStrategy codeGenerationStrategy;
+    private final ApplicationEventPublisher eventPublisher;
 
     public List<DashboardDtos.PropertyDto> getLandlordProperties(String email) {
         User landlord = getUserByEmail(email);
@@ -44,10 +53,7 @@ public class PropertyRoomService {
         User landlord = getUserByEmail(email);
         requireRole(landlord, User.Role.LANDLORD);
 
-        Property property = new Property();
-        property.setName(request.getName().trim());
-        property.setAddress(request.getAddress().trim());
-        property.setLandlord(landlord);
+        Property property = propertyFactory.create(landlord, request);
         return toPropertyDto(propertyRepository.save(property));
     }
 
@@ -70,11 +76,7 @@ public class PropertyRoomService {
     public DashboardDtos.RoomDto createRoom(String email, CreateRoomRequest request) {
         Property property = getOwnedProperty(email, request.getPropertyId());
 
-        Room room = new Room();
-        room.setProperty(property);
-        room.setRoomNumber(request.getRoomNumber().trim());
-        room.setMonthlyRate(request.getMonthlyRate());
-        room.setStatus(Room.Status.AVAILABLE);
+        Room room = roomFactory.create(property, request);
         return toRoomDto(roomRepository.save(room));
     }
 
@@ -99,10 +101,12 @@ public class PropertyRoomService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Room is not available");
         }
 
-        String code = String.format("%09d", new Random().nextInt(1_000_000_000));
+        String code = codeGenerationStrategy.generateCode();
         room.setEnrollmentCode(code);
         room.setEnrollmentExpiresAt(LocalDateTime.now().plusMinutes(5));
-        return toRoomDto(roomRepository.save(room));
+        Room saved = roomRepository.save(room);
+        eventPublisher.publishEvent(new RoomCodeGeneratedEvent(saved.getId(), saved.getProperty().getId(), code));
+        return toRoomDto(saved);
     }
 
     @Transactional
@@ -131,6 +135,14 @@ public class PropertyRoomService {
         room.setEnrollmentCode(null);
         room.setEnrollmentExpiresAt(null);
         Room saved = roomRepository.save(room);
+        eventPublisher.publishEvent(
+                new TenantEnrolledEvent(
+                        tenant.getId(),
+                        saved.getId(),
+                        saved.getProperty().getId(),
+                        saved.getEnrolledAt()
+                )
+        );
 
         return toRentDetails(saved);
     }
