@@ -72,6 +72,7 @@
   border-radius: 10px;
   padding: 12px;
   position: relative;
+  cursor: pointer;
 }
 
 .property-thumb {
@@ -94,48 +95,81 @@
   margin: 8px 0 0;
 }
 
-.property-menu-wrap {
-  position: absolute;
-  top: 10px;
-  right: 10px;
+.property-details-view h3 {
+  margin: 14px 0 4px;
 }
 
-.property-kebab-btn {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  border-radius: 6px;
-  padding: 2px 6px;
-  font-size: 1rem;
+.property-details-view {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
 }
 
-.property-kebab-btn:hover {
-  background: #e2e8f0;
+.property-column {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  min-height: 430px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
 }
 
-.property-kebab-menu {
-  position: absolute;
-  right: 0;
-  top: 26px;
-  background: #ffffff;
+.property-column-right {
+  background: #f8fafc;
+}
+
+.property-rooms-list {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.room-list-item {
   border: 1px solid #dbe3f0;
   border-radius: 8px;
-  box-shadow: 0 8px 14px rgba(2, 6, 23, 0.14);
-  z-index: 10;
-}
-
-.property-kebab-menu button {
-  border: none;
-  background: transparent;
-  width: 100%;
-  text-align: left;
-  padding: 8px 12px;
+  background: #ffffff;
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
   cursor: pointer;
-  white-space: nowrap;
 }
 
-.property-kebab-menu button:hover {
-  background: #f1f5f9;
+.room-list-item.active {
+  border-color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.room-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.room-item label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.room-item input {
+  border: 1px solid #dbe3f0;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.room-item input[readonly] {
+  background: #f8fafc;
+}
+
+.property-detail-actions {
+  margin-top: auto;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .fab-wrapper {
@@ -231,4 +265,46 @@
 
 .secondary-btn {
   background: #e5e7eb;
+}
+
+.danger-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.confirm-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+}
+
+.confirm-modal {
+  width: min(92vw, 420px);
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 20px 40px rgba(2, 6, 23, 0.22);
+}
+
+.confirm-modal h3 {
+  margin: 0 0 8px;
+}
+
+.confirm-modal p {
+  margin: 0;
+}
+
+.confirm-modal-actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }

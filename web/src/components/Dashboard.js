@@ -46,8 +46,15 @@ const Dashboard = () => {
     roomNumber: '',
     monthlyRate: ''
   });
+  const [selectedPropertyId, setSelectedPropertyId] = useState(null);
+  const [selectedRoomId, setSelectedRoomId] = useState(null);
+  const [isEditingRooms, setIsEditingRooms] = useState(false);
   const [editingPropertyId, setEditingPropertyId] = useState(null);
-  const [openPropertyMenuId, setOpenPropertyMenuId] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState({
+    open: false,
+    type: '',
+    id: null
+  });
 
   useEffect(() => {
     setActiveItem(menuItems[0].key);
@@ -70,6 +77,10 @@ const Dashboard = () => {
     }
   }, [location.pathname]);
 
+  useEffect(() => {
+    setSelectedRoomId(null);
+  }, [selectedPropertyId]);
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -80,8 +91,11 @@ const Dashboard = () => {
   const handleMenuSelect = (itemKey) => {
     setActiveItem(itemKey);
     setShowActions(false);
-    setOpenPropertyMenuId(null);
     setEditingPropertyId(null);
+    setSelectedPropertyId(null);
+    setSelectedRoomId(null);
+    setIsEditingRooms(false);
+    setConfirmDelete({ open: false, type: '', id: null });
     if (location.pathname !== '/dashboard') {
       navigate('/dashboard');
     }
@@ -163,14 +177,70 @@ const Dashboard = () => {
     setActiveItem('properties');
   };
 
-  const handleEditProperty = (property) => {
-    setOpenPropertyMenuId(null);
-    setEditingPropertyId(property.id);
+  const handleRoomDetailChange = (roomId, field, value) => {
+    setRooms((prev) =>
+      prev.map((room) =>
+        room.id === roomId
+          ? {
+              ...room,
+              [field]: field === 'monthlyRate' ? Number(value) : value
+            }
+          : room
+      )
+    );
+  };
+
+  const handleDeleteProperty = (propertyId) => {
+    setProperties((prev) => prev.filter((property) => property.id !== propertyId));
+    setRooms((prev) => prev.filter((room) => room.propertyId !== propertyId));
+    setSelectedPropertyId(null);
+    setSelectedRoomId(null);
+    setIsEditingRooms(false);
+    setConfirmDelete({ open: false, type: '', id: null });
+  };
+
+  const handleDeleteRoom = (roomId) => {
+    setRooms((prev) => {
+      const nextRooms = prev.filter((room) => room.id !== roomId);
+      const nextInProperty = nextRooms.filter(
+        (room) => room.propertyId === selectedPropertyId
+      );
+      setSelectedRoomId(nextInProperty.length ? nextInProperty[0].id : null);
+      return nextRooms;
+    });
+    setIsEditingRooms(false);
+    setConfirmDelete({ open: false, type: '', id: null });
+  };
+
+  const handleEditPropertyDetails = () => {
+    if (!selectedProperty) {
+      return;
+    }
+    setEditingPropertyId(selectedProperty.id);
     setPropertyForm({
-      name: property.name,
-      address: property.address
+      name: selectedProperty.name,
+      address: selectedProperty.address
     });
     navigate('/dashboard/properties/new');
+  };
+
+  const openDeleteModal = (type, id) => {
+    setConfirmDelete({ open: true, type, id });
+  };
+
+  const closeDeleteModal = () => {
+    setConfirmDelete({ open: false, type: '', id: null });
+  };
+
+  const handleConfirmDelete = () => {
+    if (confirmDelete.type === 'property' && confirmDelete.id) {
+      handleDeleteProperty(confirmDelete.id);
+      return;
+    }
+
+    if (confirmDelete.type === 'room' && confirmDelete.id) {
+      handleDeleteRoom(confirmDelete.id);
+    }
   };
 
   const isCreatePropertyPage = location.pathname === '/dashboard/properties/new';
@@ -180,6 +250,17 @@ const Dashboard = () => {
     activeItem === 'properties' &&
     !isCreatePropertyPage &&
     !isCreateRoomPage;
+  const selectedProperty = properties.find(
+    (property) => property.id === selectedPropertyId
+  );
+  const propertyRooms = rooms.filter((room) => room.propertyId === selectedPropertyId);
+  const selectedRoom = propertyRooms.find((room) => room.id === selectedRoomId);
+
+  useEffect(() => {
+    if (propertyRooms.length && !selectedRoomId) {
+      setSelectedRoomId(propertyRooms[0].id);
+    }
+  }, [propertyRooms, selectedRoomId]);
 
   return (
     <div className="dashboard-layout">
@@ -302,34 +383,148 @@ const Dashboard = () => {
             <div className="dashboard-card">
               <h2>{menuItems.find((item) => item.key === activeItem)?.label}</h2>
               {isLandlordProperties ? (
-                properties.length ? (
+                selectedProperty ? (
+                  <section className="property-details-view">
+                    <div className="property-column property-column-left">
+                      <button
+                        type="button"
+                        className="secondary-btn"
+                        onClick={() => {
+                          setSelectedPropertyId(null);
+                          setSelectedRoomId(null);
+                          setIsEditingRooms(false);
+                        }}
+                      >
+                        Back to Properties
+                      </button>
+                      <h3>{selectedProperty.name}</h3>
+                      <p className="property-address">{selectedProperty.address}</p>
+
+                      <div className="property-rooms-list">
+                        <h4>Rooms</h4>
+                        {propertyRooms.length ? (
+                          propertyRooms.map((room) => (
+                            <button
+                              key={room.id}
+                              type="button"
+                              className={`room-list-item ${
+                                selectedRoomId === room.id ? 'active' : ''
+                              }`}
+                              onClick={() => setSelectedRoomId(room.id)}
+                            >
+                              <span>Room {room.roomNumber}</span>
+                              <span>{room.status}</span>
+                            </button>
+                          ))
+                        ) : (
+                          <p>No rooms yet for this property.</p>
+                        )}
+                      </div>
+
+                      <div className="property-detail-actions">
+                        <button
+                          type="button"
+                          className="primary-btn"
+                          onClick={handleEditPropertyDetails}
+                        >
+                          Edit Property Details
+                        </button>
+                        <button
+                          type="button"
+                          className="danger-btn"
+                          onClick={() =>
+                            openDeleteModal('property', selectedProperty.id)
+                          }
+                        >
+                          Delete Property
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="property-column property-column-middle">
+                      <h4>Room Details</h4>
+                      {selectedRoom ? (
+                        <div className="room-item">
+                          <label>
+                            Room Number
+                            <input
+                              value={selectedRoom.roomNumber}
+                              onChange={(event) =>
+                                handleRoomDetailChange(
+                                  selectedRoom.id,
+                                  'roomNumber',
+                                  event.target.value
+                                )
+                              }
+                              readOnly={!isEditingRooms}
+                            />
+                          </label>
+                          <label>
+                            Monthly Rate
+                            <input
+                              type="number"
+                              min="1"
+                              value={selectedRoom.monthlyRate}
+                              onChange={(event) =>
+                                handleRoomDetailChange(
+                                  selectedRoom.id,
+                                  'monthlyRate',
+                                  event.target.value
+                                )
+                              }
+                              readOnly={!isEditingRooms}
+                            />
+                          </label>
+                          <label>
+                            Status
+                            <input value={selectedRoom.status} readOnly />
+                          </label>
+                        </div>
+                      ) : (
+                        <p>Select a room to view details.</p>
+                      )}
+
+                      <div className="property-detail-actions">
+                        <button
+                          type="button"
+                          className="primary-btn"
+                          onClick={() => setIsEditingRooms((prev) => !prev)}
+                          disabled={!selectedRoom}
+                        >
+                          {isEditingRooms ? 'Save Room Details' : 'Edit Room Details'}
+                        </button>
+                        <button
+                          type="button"
+                          className="danger-btn"
+                          onClick={() => openDeleteModal('room', selectedRoom.id)}
+                          disabled={!selectedRoom}
+                        >
+                          Delete Room
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="property-column property-column-right">
+                      <h4>&nbsp;</h4>
+                    </div>
+                  </section>
+                ) : properties.length ? (
                   <div className="properties-grid">
                     {properties.map((property) => (
-                      <article key={property.id} className="property-item">
-                        <div className="property-menu-wrap">
-                          <button
-                            type="button"
-                            className="property-kebab-btn"
-                            onClick={() =>
-                              setOpenPropertyMenuId((prev) =>
-                                prev === property.id ? null : property.id
-                              )
-                            }
-                            aria-label="Property actions"
-                          >
-                            ...
-                          </button>
-                          {openPropertyMenuId === property.id && (
-                            <div className="property-kebab-menu">
-                              <button
-                                type="button"
-                                onClick={() => handleEditProperty(property)}
-                              >
-                                Edit Property
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                      <article
+                        key={property.id}
+                        className="property-item"
+                        onClick={() => {
+                          setSelectedPropertyId(property.id);
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            setSelectedPropertyId(property.id);
+                          }
+                        }}
+                      >
                         <div className="property-thumb">{property.name}</div>
                         <p className="property-address">{property.address}</p>
                         <p className="property-meta">
@@ -376,6 +571,27 @@ const Dashboard = () => {
             >
               +
             </button>
+          </div>
+        )}
+
+        {confirmDelete.open && (
+          <div className="confirm-modal-backdrop">
+            <div className="confirm-modal">
+              <h3>Confirm Deletion</h3>
+              <p>
+                {confirmDelete.type === 'property'
+                  ? 'Are you sure you want to delete this property and all associated rooms?'
+                  : 'Are you sure you want to delete this room?'}
+              </p>
+              <div className="confirm-modal-actions">
+                <button type="button" className="secondary-btn" onClick={closeDeleteModal}>
+                  Cancel
+                </button>
+                <button type="button" className="danger-btn" onClick={handleConfirmDelete}>
+                  Yes, Delete
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </main>
