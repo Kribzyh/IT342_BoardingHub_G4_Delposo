@@ -49,6 +49,22 @@ function App() {
             }
           />
           <Route
+            path="/dashboard/properties/new"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/rooms/new"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/oauth2/redirect"
             element={<OAuth2Redirect />}
           />
