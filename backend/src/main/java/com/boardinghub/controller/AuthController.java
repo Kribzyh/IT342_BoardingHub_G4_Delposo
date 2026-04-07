@@ -83,6 +83,7 @@ public class AuthController {
         if (role == null || role.isBlank()) {
             role = "TENANT";
         }
+        role = role.toUpperCase();
 
         RestTemplate restTemplate = new RestTemplate();
         String url = "https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=" + token;
