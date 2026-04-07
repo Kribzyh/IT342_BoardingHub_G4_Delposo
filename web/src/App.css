@@ -165,6 +165,87 @@
   background: #f8fafc;
 }
 
+.room-code-box {
+  border: 1px dashed #93c5fd;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.room-code-box p {
+  margin: 8px 0 0;
+}
+
+.tenant-thumb-list {
+  margin-top: 8px;
+}
+
+.tenant-thumb-list h5 {
+  margin: 0 0 8px;
+}
+
+.tenant-thumb {
+  width: 100%;
+  border: 1px solid #dbe3f0;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.tenant-thumb.active {
+  border-color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.tenant-detail-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.tenant-rent-view {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.tenant-rent-column {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  min-height: 320px;
+  padding: 14px;
+}
+
+.tenant-rent-column-blank {
+  background: #000000;
+}
+
+.tenant-enroll-form {
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tenant-enroll-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tenant-enroll-form form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tenant-enroll-form input {
+  border: 1px solid #dbe3f0;
+  border-radius: 8px;
+  padding: 10px;
+}
+
 .property-detail-actions {
   margin-top: auto;
   display: flex;

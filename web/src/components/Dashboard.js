@@ -55,6 +55,14 @@ const Dashboard = () => {
     type: '',
     id: null
   });
+  const [tenantAssignments, setTenantAssignments] = useState(() => {
+    const saved = localStorage.getItem('tenantAssignments');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [selectedTenantKey, setSelectedTenantKey] = useState(null);
+  const [enrollCode, setEnrollCode] = useState('');
+  const [enrollMessage, setEnrollMessage] = useState('');
+  const [showEnrollForm, setShowEnrollForm] = useState(false);
 
   useEffect(() => {
     setActiveItem(menuItems[0].key);
@@ -69,6 +77,10 @@ const Dashboard = () => {
   }, [rooms]);
 
   useEffect(() => {
+    localStorage.setItem('tenantAssignments', JSON.stringify(tenantAssignments));
+  }, [tenantAssignments]);
+
+  useEffect(() => {
     if (
       location.pathname === '/dashboard/properties/new' ||
       location.pathname === '/dashboard/rooms/new'
@@ -79,6 +91,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     setSelectedRoomId(null);
+    setSelectedTenantKey(null);
   }, [selectedPropertyId]);
 
   const handleLogout = () => {
@@ -94,8 +107,12 @@ const Dashboard = () => {
     setEditingPropertyId(null);
     setSelectedPropertyId(null);
     setSelectedRoomId(null);
+    setSelectedTenantKey(null);
     setIsEditingRooms(false);
     setConfirmDelete({ open: false, type: '', id: null });
+    setEnrollCode('');
+    setEnrollMessage('');
+    setShowEnrollForm(false);
     if (location.pathname !== '/dashboard') {
       navigate('/dashboard');
     }
@@ -193,8 +210,12 @@ const Dashboard = () => {
   const handleDeleteProperty = (propertyId) => {
     setProperties((prev) => prev.filter((property) => property.id !== propertyId));
     setRooms((prev) => prev.filter((room) => room.propertyId !== propertyId));
+    setTenantAssignments((prev) =>
+      prev.filter((assignment) => assignment.propertyId !== propertyId)
+    );
     setSelectedPropertyId(null);
     setSelectedRoomId(null);
+    setSelectedTenantKey(null);
     setIsEditingRooms(false);
     setConfirmDelete({ open: false, type: '', id: null });
   };
@@ -208,8 +229,88 @@ const Dashboard = () => {
       setSelectedRoomId(nextInProperty.length ? nextInProperty[0].id : null);
       return nextRooms;
     });
+    setTenantAssignments((prev) => prev.filter((assignment) => assignment.roomId !== roomId));
+    setSelectedTenantKey(null);
     setIsEditingRooms(false);
     setConfirmDelete({ open: false, type: '', id: null });
+  };
+
+  const generateEnrollmentCode = () => {
+    return `${Math.floor(100000000 + Math.random() * 900000000)}`;
+  };
+
+  const handleGenerateRoomCode = () => {
+    if (!selectedRoom || selectedRoom.status !== 'Available') {
+      return;
+    }
+    const code = generateEnrollmentCode();
+    const expiresAt = Date.now() + 5 * 60 * 1000;
+    setRooms((prev) =>
+      prev.map((room) =>
+        room.id === selectedRoom.id
+          ? { ...room, enrollmentCode: code, enrollmentExpiresAt: expiresAt }
+          : room
+      )
+    );
+  };
+
+  const handleTenantEnroll = (event) => {
+    event.preventDefault();
+    if (!/^\d{9}$/.test(enrollCode)) {
+      setEnrollMessage('Code must be exactly 9 digits.');
+      return;
+    }
+
+    const now = Date.now();
+    const targetRoom = rooms.find(
+      (room) =>
+        room.enrollmentCode === enrollCode &&
+        room.enrollmentExpiresAt &&
+        room.enrollmentExpiresAt > now &&
+        room.status === 'Available'
+    );
+
+    if (!targetRoom) {
+      setEnrollMessage('Invalid or expired code.');
+      return;
+    }
+
+    const tenantKey = user.email || user.id || user.fullName || `tenant-${Date.now()}`;
+    const tenantName = user.fullName || user.email || 'Tenant';
+
+    setRooms((prev) =>
+      prev.map((room) =>
+        room.id === targetRoom.id
+          ? {
+              ...room,
+              status: 'Occupied',
+              tenantKey,
+              tenantName,
+              enrollmentCode: null,
+              enrollmentExpiresAt: null
+            }
+          : room
+      )
+    );
+
+    setTenantAssignments((prev) => {
+      const filtered = prev.filter((assignment) => assignment.tenantKey !== tenantKey);
+      return [
+        ...filtered,
+        {
+          tenantKey,
+          tenantName,
+          propertyId: targetRoom.propertyId,
+          roomId: targetRoom.id,
+          monthlyRate: targetRoom.monthlyRate,
+          enrolledAt: new Date().toISOString()
+        }
+      ];
+    });
+
+    setEnrollCode('');
+    setEnrollMessage('Enrolled successfully.');
+    setShowEnrollForm(false);
   };
 
   const handleEditPropertyDetails = () => {
@@ -250,17 +351,41 @@ const Dashboard = () => {
     activeItem === 'properties' &&
     !isCreatePropertyPage &&
     !isCreateRoomPage;
+  const isTenantRent = normalizedRole === 'tenant' && activeItem === 'rent';
   const selectedProperty = properties.find(
     (property) => property.id === selectedPropertyId
   );
   const propertyRooms = rooms.filter((room) => room.propertyId === selectedPropertyId);
   const selectedRoom = propertyRooms.find((room) => room.id === selectedRoomId);
+  const selectedRoomTenant = tenantAssignments.find(
+    (assignment) =>
+      assignment.propertyId === selectedPropertyId && assignment.roomId === selectedRoomId
+  );
+  const selectedTenantDetail = tenantAssignments.find(
+    (assignment) => assignment.tenantKey === selectedTenantKey
+  );
+  const tenantKey = user.email || user.id || user.fullName;
+  const tenantEnrollment = tenantAssignments.find(
+    (assignment) => assignment.tenantKey === tenantKey
+  );
+  const tenantProperty = properties.find(
+    (property) => property.id === tenantEnrollment?.propertyId
+  );
+  const tenantRoom = rooms.find((room) => room.id === tenantEnrollment?.roomId);
 
   useEffect(() => {
     if (propertyRooms.length && !selectedRoomId) {
       setSelectedRoomId(propertyRooms[0].id);
     }
   }, [propertyRooms, selectedRoomId]);
+
+  useEffect(() => {
+    if (selectedRoomTenant) {
+      setSelectedTenantKey(selectedRoomTenant.tenantKey);
+    } else {
+      setSelectedTenantKey(null);
+    }
+  }, [selectedRoomTenant]);
 
   return (
     <div className="dashboard-layout">
@@ -386,17 +511,6 @@ const Dashboard = () => {
                 selectedProperty ? (
                   <section className="property-details-view">
                     <div className="property-column property-column-left">
-                      <button
-                        type="button"
-                        className="secondary-btn"
-                        onClick={() => {
-                          setSelectedPropertyId(null);
-                          setSelectedRoomId(null);
-                          setIsEditingRooms(false);
-                        }}
-                      >
-                        Back to Properties
-                      </button>
                       <h3>{selectedProperty.name}</h3>
                       <p className="property-address">{selectedProperty.address}</p>
 
@@ -444,7 +558,7 @@ const Dashboard = () => {
                     <div className="property-column property-column-middle">
                       <h4>Room Details</h4>
                       {selectedRoom ? (
-                        <div className="room-item">
+                        <div className="room-item room-detail-pane">
                           <label>
                             Room Number
                             <input
@@ -479,6 +593,40 @@ const Dashboard = () => {
                             Status
                             <input value={selectedRoom.status} readOnly />
                           </label>
+                          {selectedRoom.status === 'Available' ? (
+                            <div className="room-code-box">
+                              <button
+                                type="button"
+                                className="secondary-btn"
+                                onClick={handleGenerateRoomCode}
+                              >
+                                Generate 9-digit Code
+                              </button>
+                              {selectedRoom.enrollmentCode ? (
+                                <p>
+                                  Code: <strong>{selectedRoom.enrollmentCode}</strong> (expires in
+                                  5 minutes)
+                                </p>
+                              ) : null}
+                            </div>
+                          ) : null}
+
+                          {selectedRoomTenant ? (
+                            <div className="tenant-thumb-list">
+                              <h5>Tenant</h5>
+                              <button
+                                type="button"
+                                className={`tenant-thumb ${
+                                  selectedTenantKey === selectedRoomTenant.tenantKey
+                                    ? 'active'
+                                    : ''
+                                }`}
+                                onClick={() => setSelectedTenantKey(selectedRoomTenant.tenantKey)}
+                              >
+                                {selectedRoomTenant.tenantName}
+                              </button>
+                            </div>
+                          ) : null}
                         </div>
                       ) : (
                         <p>Select a room to view details.</p>
@@ -505,7 +653,30 @@ const Dashboard = () => {
                     </div>
 
                     <div className="property-column property-column-right">
-                      <h4>&nbsp;</h4>
+                      <h4>Tenant Details</h4>
+                      {selectedTenantDetail ? (
+                        <div className="tenant-detail-card">
+                          <p>
+                            <strong>Tenant:</strong> {selectedTenantDetail.tenantName}
+                          </p>
+                          <p>
+                            <strong>Property:</strong> {selectedProperty?.name || '-'}
+                          </p>
+                          <p>
+                            <strong>Room:</strong> {selectedRoom?.roomNumber || '-'}
+                          </p>
+                          <p>
+                            <strong>Monthly Rate:</strong>{' '}
+                            {selectedTenantDetail.monthlyRate}
+                          </p>
+                          <p>
+                            <strong>Enrolled Date:</strong>{' '}
+                            {new Date(selectedTenantDetail.enrolledAt).toLocaleString()}
+                          </p>
+                        </div>
+                      ) : (
+                        <p>No tenant selected.</p>
+                      )}
                     </div>
                   </section>
                 ) : properties.length ? (
@@ -537,10 +708,86 @@ const Dashboard = () => {
                   <p>No properties yet. Use the + button to add your first property.</p>
                 )
               ) : (
-                <p>
-                  This is your {activeItem} section. You can now add page content
-                  for this menu option.
-                </p>
+                <>
+                  {isTenantRent ? (
+                    tenantEnrollment && tenantProperty && tenantRoom ? (
+                      <div className="tenant-rent-view">
+                        <div className="tenant-rent-column">
+                          <h3>Boarding House Details</h3>
+                          <p>
+                            <strong>Property:</strong> {tenantProperty.name}
+                          </p>
+                          <p>
+                            <strong>Address:</strong> {tenantProperty.address}
+                          </p>
+                          <p>
+                            <strong>Room:</strong> {tenantRoom.roomNumber}
+                          </p>
+                          <p>
+                            <strong>Monthly Rate:</strong> {tenantEnrollment.monthlyRate}
+                          </p>
+                          <p>
+                            <strong>Enrolled Date:</strong>{' '}
+                            {new Date(tenantEnrollment.enrolledAt).toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="tenant-rent-column tenant-rent-column-blank" />
+                      </div>
+                    ) : (
+                      <div className="tenant-enroll-form">
+                        {!showEnrollForm ? (
+                          <button
+                            type="button"
+                            className="primary-btn"
+                            onClick={() => {
+                              setShowEnrollForm(true);
+                              setEnrollMessage('');
+                            }}
+                          >
+                            Enroll
+                          </button>
+                        ) : (
+                          <form onSubmit={handleTenantEnroll}>
+                            <h3>Enroll to a Room</h3>
+                            <label htmlFor="enrollCode">
+                              Enter 9-digit code
+                              <input
+                                id="enrollCode"
+                                value={enrollCode}
+                                onChange={(event) => setEnrollCode(event.target.value)}
+                                placeholder="#########"
+                                maxLength={9}
+                                required
+                              />
+                            </label>
+                            <div className="form-actions">
+                              <button
+                                type="button"
+                                className="secondary-btn"
+                                onClick={() => {
+                                  setShowEnrollForm(false);
+                                  setEnrollCode('');
+                                  setEnrollMessage('');
+                                }}
+                              >
+                                Cancel
+                              </button>
+                              <button type="submit" className="primary-btn">
+                                Submit Code
+                              </button>
+                            </div>
+                          </form>
+                        )}
+                        {enrollMessage ? <p>{enrollMessage}</p> : null}
+                      </div>
+                    )
+                  ) : (
+                    <p>
+                      This is your {activeItem} section. You can now add page
+                      content for this menu option.
+                    </p>
+                  )}
+                </>
               )}
             </div>
           </>
