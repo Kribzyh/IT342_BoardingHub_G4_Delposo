@@ -2,9 +2,11 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
+import CompleteGoogleProfile from './components/auth/CompleteGoogleProfile';
 import Dashboard from './components/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
+import OAuth2Redirect from './components/auth/OAuth2Redirect';
 import './App.css';
 
 function App() {
@@ -31,12 +33,24 @@ function App() {
             }
           />
           <Route
-            path="/dashboard"
+            path="/complete-profile"
+            element={
+              <PublicRoute>
+                <CompleteGoogleProfile />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/dashboard/*"
             element={
               <ProtectedRoute>
                 <Dashboard />
               </ProtectedRoute>
             }
+          />
+          <Route
+            path="/oauth2/redirect"
+            element={<OAuth2Redirect />}
           />
           <Route
             path="/"
