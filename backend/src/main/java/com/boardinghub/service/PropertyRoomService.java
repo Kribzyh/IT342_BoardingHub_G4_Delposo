@@ -23,8 +23,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 @Service
@@ -182,6 +187,35 @@ public class PropertyRoomService {
         Room room = roomRepository.findByTenant(tenant)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tenant not enrolled"));
         return toRentDetails(room);
+    }
+
+    public DashboardDtos.TenantCurrentRentDto getTenantCurrentRentSummary(String email) {
+        DashboardDtos.RentDetailsDto rent = getTenantRentDetails(email);
+        // Later: derive from open invoice; for now billing period is the current calendar month.
+        YearMonth billingYm = YearMonth.now();
+        YearMonth nowYm = YearMonth.now();
+        String billingMonth = billingYm.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH));
+
+        String status;
+        if (billingYm.equals(nowYm)) {
+            status = "PENDING";
+        } else if (billingYm.isBefore(nowYm)) {
+            status = "OVERDUE";
+        } else {
+            status = "UPCOMING";
+        }
+
+        LocalDate today = LocalDate.now();
+        LocalDate endOfBillingMonth = billingYm.atEndOfMonth();
+        long daysBetween = ChronoUnit.DAYS.between(today, endOfBillingMonth);
+        int remainingDays = (int) Math.max(0L, daysBetween);
+
+        return new DashboardDtos.TenantCurrentRentDto(
+                rent.getMonthlyRate(),
+                status,
+                billingMonth,
+                remainingDays
+        );
     }
 
     private Property getOwnedProperty(String email, Long propertyId) {
