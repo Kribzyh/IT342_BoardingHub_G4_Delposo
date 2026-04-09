@@ -24,6 +24,14 @@ public class PropertyRoomController {
         return ResponseEntity.ok(propertyRoomService.getLandlordProperties(authentication.getName()));
     }
 
+    @GetMapping("/landlord/tenants")
+    public ResponseEntity<List<DashboardDtos.LandlordTenantDto>> getLandlordTenants(
+            Authentication authentication,
+            @RequestParam(required = false) Long propertyId
+    ) {
+        return ResponseEntity.ok(propertyRoomService.getLandlordTenants(authentication.getName(), propertyId));
+    }
+
     @PostMapping("/properties")
     public ResponseEntity<DashboardDtos.PropertyDto> createProperty(
             Authentication authentication,
