@@ -47,3 +47,10 @@ export const getTenantRent = async () => {
   const response = await api.get('/dashboard/tenant/rent');
   return response.data;
 };
+
+export const getLandlordTenants = async (propertyId) => {
+  const response = await api.get('/dashboard/landlord/tenants', {
+    params: propertyId ? { propertyId } : {}
+  });
+  return response.data;
+};

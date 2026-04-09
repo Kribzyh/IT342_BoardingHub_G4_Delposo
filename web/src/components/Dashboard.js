@@ -9,6 +9,7 @@ import {
   enrollTenant,
   generateRoomCode,
   getLandlordProperties,
+  getLandlordTenants,
   getTenantRent,
   updateProperty,
   updateRoom
@@ -43,10 +44,19 @@ const Dashboard = () => {
   const [showEnrollForm, setShowEnrollForm] = useState(false);
   const [enrollCode, setEnrollCode] = useState('');
   const [enrollMessage, setEnrollMessage] = useState('');
+  const [tenantFilterPropertyId, setTenantFilterPropertyId] = useState('');
+  const [landlordTenants, setLandlordTenants] = useState([]);
+  const [selectedTenantKey, setSelectedTenantKey] = useState('');
 
   const selectedProperty = properties.find((p) => p.id === selectedPropertyId);
   const propertyRooms = selectedProperty?.rooms || [];
   const selectedRoom = propertyRooms.find((r) => r.id === selectedRoomId);
+  const filteredLandlordTenants = landlordTenants;
+  const selectedTenant = filteredLandlordTenants.find(
+    (tenant) =>
+      `${tenant.tenantId}-${tenant.propertyId}-${tenant.roomNumber}` ===
+      selectedTenantKey
+  );
 
   const refreshLandlord = async () => setProperties(await getLandlordProperties());
   const refreshTenant = async () => {
@@ -56,6 +66,9 @@ const Dashboard = () => {
       setTenantRent(null);
     }
   };
+  const refreshLandlordTenants = async (propertyId) => {
+    setLandlordTenants(await getLandlordTenants(propertyId));
+  };
 
   useEffect(() => {
     if (location.pathname === '/dashboard/properties/new' || location.pathname === '/dashboard/rooms/new') setActiveItem('properties');
@@ -64,6 +77,28 @@ const Dashboard = () => {
     if (normalizedRole === 'landlord') refreshLandlord();
     if (normalizedRole === 'tenant') refreshTenant();
   }, [normalizedRole]);
+  useEffect(() => {
+    if (normalizedRole === 'landlord' && activeItem === 'tenants') {
+      refreshLandlordTenants(tenantFilterPropertyId ? Number(tenantFilterPropertyId) : undefined);
+    }
+  }, [normalizedRole, activeItem, tenantFilterPropertyId]);
+  useEffect(() => {
+    if (!filteredLandlordTenants.length) {
+      setSelectedTenantKey('');
+      return;
+    }
+    const exists = filteredLandlordTenants.some(
+      (tenant) =>
+        `${tenant.tenantId}-${tenant.propertyId}-${tenant.roomNumber}` ===
+        selectedTenantKey
+    );
+    if (!exists) {
+      const first = filteredLandlordTenants[0];
+      setSelectedTenantKey(
+        `${first.tenantId}-${first.propertyId}-${first.roomNumber}`
+      );
+    }
+  }, [filteredLandlordTenants, selectedTenantKey]);
   useEffect(() => {
     if (!selectedRoomId && propertyRooms.length) setSelectedRoomId(propertyRooms[0].id);
   }, [propertyRooms, selectedRoomId]);
@@ -83,6 +118,8 @@ const Dashboard = () => {
     setShowEnrollForm(false);
     setEnrollCode('');
     setEnrollMessage('');
+    setTenantFilterPropertyId('');
+    setSelectedTenantKey('');
     if (location.pathname !== '/dashboard') navigate('/dashboard');
   };
 
@@ -143,6 +180,7 @@ const Dashboard = () => {
   const isCreatePropertyPage = location.pathname === '/dashboard/properties/new';
   const isCreateRoomPage = location.pathname === '/dashboard/rooms/new';
   const isLandlordProperties = normalizedRole === 'landlord' && activeItem === 'properties' && !isCreatePropertyPage && !isCreateRoomPage;
+  const isLandlordTenants = normalizedRole === 'landlord' && activeItem === 'tenants';
   const isTenantRent = normalizedRole === 'tenant' && activeItem === 'rent';
 
   return (
@@ -220,6 +258,68 @@ const Dashboard = () => {
                   {properties.map((property) => <article key={property.id} className="property-item" onClick={() => setSelectedPropertyId(property.id)} role="button" tabIndex={0}><div className="property-thumb">{property.name}</div><p className="property-address">{property.address}</p><p className="property-meta">Rooms: {(property.rooms || []).length}</p></article>)}
                 </div>
               )
+            ) : isLandlordTenants ? (
+              <div>
+                <div className="form-actions" style={{ justifyContent: 'flex-start', marginBottom: '12px' }}>
+                  <label htmlFor="tenantPropertyFilter">Filter by property:&nbsp;</label>
+                  <select
+                    id="tenantPropertyFilter"
+                    value={tenantFilterPropertyId}
+                    onChange={(e) => setTenantFilterPropertyId(e.target.value)}
+                  >
+                    <option value="">All properties</option>
+                    {properties.map((property) => (
+                      <option key={property.id} value={property.id}>
+                        {property.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {filteredLandlordTenants.length ? (
+                  <div className="tenant-tab-layout">
+                    <div className="tenant-list-column">
+                      {filteredLandlordTenants.map((tenant) => {
+                        const key = `${tenant.tenantId}-${tenant.propertyId}-${tenant.roomNumber}`;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            className={`tenant-list-item ${
+                              selectedTenantKey === key ? 'active' : ''
+                            }`}
+                            onClick={() => setSelectedTenantKey(key)}
+                          >
+                            <div className="tenant-list-name">{tenant.tenantName}</div>
+                            <div className="tenant-list-meta">{tenant.propertyName}</div>
+                            <div className="tenant-list-meta">Room {tenant.roomNumber}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="tenant-detail-column">
+                      {selectedTenant ? (
+                        <div className="tenant-detail-card">
+                          <p><strong>Name:</strong> {selectedTenant.tenantName}</p>
+                          <p><strong>Email:</strong> {selectedTenant.tenantEmail}</p>
+                          <p><strong>Property:</strong> {selectedTenant.propertyName}</p>
+                          <p><strong>Room:</strong> {selectedTenant.roomNumber}</p>
+                          <p><strong>Monthly Rate:</strong> {selectedTenant.monthlyRate}</p>
+                          <p>
+                            <strong>Enrolled Date:</strong>{' '}
+                            {selectedTenant.enrolledAt
+                              ? new Date(selectedTenant.enrolledAt).toLocaleString()
+                              : '-'}
+                          </p>
+                        </div>
+                      ) : (
+                        <p>Select a tenant to view details.</p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <p>No tenants found for the selected filter.</p>
+                )}
+              </div>
             ) : isTenantRent ? (
               tenantRent ? (
                 <div className="tenant-rent-view"><div className="tenant-rent-column"><h3>Boarding House Details</h3><p><strong>Property:</strong> {tenantRent.propertyName}</p><p><strong>Address:</strong> {tenantRent.propertyAddress}</p><p><strong>Room:</strong> {tenantRent.roomNumber}</p><p><strong>Monthly Rate:</strong> {tenantRent.monthlyRate}</p><p><strong>Enrolled Date:</strong> {tenantRent.enrolledAt ? new Date(tenantRent.enrolledAt).toLocaleString() : '-'}</p></div><div className="tenant-rent-column tenant-rent-column-blank" /></div>

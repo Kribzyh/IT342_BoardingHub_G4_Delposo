@@ -42,6 +42,20 @@ public class DashboardDtos {
 
     @Data
     @AllArgsConstructor
+    public static class LandlordTenantDto {
+        private Long tenantId;
+        private String tenantName;
+        private String tenantEmail;
+        private Long propertyId;
+        private String propertyName;
+        private Long roomId;
+        private String roomNumber;
+        private BigDecimal monthlyRate;
+        private LocalDateTime enrolledAt;
+    }
+
+    @Data
+    @AllArgsConstructor
     public static class RentDetailsDto {
         private Long propertyId;
         private String propertyName;
