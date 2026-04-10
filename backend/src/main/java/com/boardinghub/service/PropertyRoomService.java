@@ -13,6 +13,7 @@ import com.boardinghub.event.TenantEnrolledEvent;
 import com.boardinghub.factory.PropertyFactory;
 import com.boardinghub.factory.RoomFactory;
 import com.boardinghub.repository.PropertyRepository;
+import com.boardinghub.repository.RentPaymentRepository;
 import com.boardinghub.repository.RoomRepository;
 import com.boardinghub.repository.UserRepository;
 import com.boardinghub.strategy.CodeGenerationStrategy;
@@ -38,6 +39,7 @@ public class PropertyRoomService {
     private final PropertyRepository propertyRepository;
     private final RoomRepository roomRepository;
     private final UserRepository userRepository;
+    private final RentPaymentRepository rentPaymentRepository;
     private final PropertyFactory propertyFactory;
     private final RoomFactory roomFactory;
     private final CodeGenerationStrategy codeGenerationStrategy;
@@ -191,13 +193,21 @@ public class PropertyRoomService {
 
     public DashboardDtos.TenantCurrentRentDto getTenantCurrentRentSummary(String email) {
         DashboardDtos.RentDetailsDto rent = getTenantRentDetails(email);
+        User tenant = getUserByEmail(email);
         // Later: derive from open invoice; for now billing period is the current calendar month.
         YearMonth billingYm = YearMonth.now();
         YearMonth nowYm = YearMonth.now();
         String billingMonth = billingYm.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH));
 
+        LocalDateTime monthStart = billingYm.atDay(1).atStartOfDay();
+        LocalDateTime nextMonthStart = billingYm.plusMonths(1).atDay(1).atStartOfDay();
+        boolean paidThisBillingMonth = rentPaymentRepository.existsByTenantAndRecordedAtGreaterThanEqualAndRecordedAtLessThan(
+                tenant, monthStart, nextMonthStart);
+
         String status;
-        if (billingYm.equals(nowYm)) {
+        if (paidThisBillingMonth) {
+            status = "PAID";
+        } else if (billingYm.equals(nowYm)) {
             status = "PENDING";
         } else if (billingYm.isBefore(nowYm)) {
             status = "OVERDUE";
