@@ -456,3 +456,81 @@
   justify-content: flex-end;
   gap: 10px;
 }
+
+.payment-error {
+  color: #b91c1c;
+  font-size: 0.95rem;
+  margin: 8px 0 0;
+}
+
+.payment-sync-notice {
+  background: #ecfdf5;
+  border: 1px solid #6ee7b7;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 0 0 14px;
+  color: #065f46;
+  font-size: 0.95rem;
+}
+
+.cash-payment-notice {
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 8px 0 0;
+  color: #92400e;
+  font-size: 0.95rem;
+}
+
+.payment-choice-modal .payment-choice-hint {
+  margin: 0 0 14px;
+  font-size: 0.9rem;
+  color: #475569;
+  line-height: 1.45;
+}
+
+.payment-choice-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.payment-choice-actions .primary-btn,
+.payment-choice-actions .secondary-btn {
+  width: 100%;
+}
+
+.payment-records-section {
+  overflow-x: auto;
+}
+
+.payment-records-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.payment-records-table th,
+.payment-records-table td {
+  border: 1px solid #e2e8f0;
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.payment-records-table th {
+  background: #f1f5f9;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.payment-records-table tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.payment-ref-cell code {
+  font-size: 0.75rem;
+  word-break: break-all;
+}

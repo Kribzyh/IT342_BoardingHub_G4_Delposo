@@ -60,8 +60,13 @@ export const getTenantCurrentRent = async () => {
   return response.data;
 };
 
-export const createPaymongoCheckout = async (invoiceId) => {
-  const response = await api.post('/payments/paymongo/checkout', { invoiceId });
+export const createPaymongoCheckout = async (payload = {}) => {
+  const response = await api.post('/payments/paymongo/checkout', payload);
+  return response.data;
+};
+
+export const completePaymongoPayment = async (paymentIntentId) => {
+  const response = await api.post('/payments/paymongo/complete', { paymentIntentId });
   return response.data;
 };
 
