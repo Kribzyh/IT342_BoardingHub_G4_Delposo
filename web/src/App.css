@@ -534,3 +534,8 @@
   font-size: 0.75rem;
   word-break: break-all;
 }
+
+.room-code-expiry {
+  font-size: 0.9rem;
+  color: #64748b;
+}
