@@ -302,6 +302,12 @@
   padding: 12px;
 }
 
+.tenant-rent-loading {
+  padding: 24px 14px;
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
 .tenant-rent-view {
   display: grid;
   grid-template-columns: 1fr 1fr;
