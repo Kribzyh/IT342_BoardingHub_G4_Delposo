@@ -48,6 +48,7 @@ public class PaymentService {
     private final UserRepository userRepository;
     private final RoomRepository roomRepository;
     private final RentPaymentRepository rentPaymentRepository;
+    private final DashboardSseService dashboardSseService;
     private final PayMongoProperties payMongoProperties;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -136,6 +137,7 @@ public class PaymentService {
 
         Optional<RentPayment> already = rentPaymentRepository.findByPaymongoPaymentIntentId(piId);
         if (already.isPresent()) {
+            notifyDashboardPaymentChanged(already.get());
             return new PaymongoCompleteResponse(true, "Payment already recorded.", toDto(already.get()));
         }
 
@@ -178,8 +180,18 @@ public class PaymentService {
         rp.setPaymentMethodType(methodType);
         rp.setPaymongoStatus(status);
         RentPayment saved = rentPaymentRepository.save(rp);
+        notifyDashboardPaymentChanged(saved);
 
         return new PaymongoCompleteResponse(true, "Payment recorded.", toDto(saved));
+    }
+
+    private void notifyDashboardPaymentChanged(RentPayment rp) {
+        try {
+            dashboardSseService.publish(rp.getTenant().getEmail());
+            dashboardSseService.publish(rp.getRoom().getProperty().getLandlord().getEmail());
+        } catch (Exception ignored) {
+            // SSE must not affect payment persistence
+        }
     }
 
     @Transactional(readOnly = true)

@@ -519,16 +519,128 @@
   border: 1px solid #fcd34d;
   border-radius: 8px;
   padding: 10px 12px;
-  margin: 8px 0 0;
+  margin: 8px 0 16px;
   color: #92400e;
   font-size: 0.95rem;
 }
 
-.payment-choice-modal .payment-choice-hint {
-  margin: 0 0 14px;
+.cash-pending-notice {
+  background: #eff6ff;
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 0 0 12px;
+  color: #1e3a5f;
   font-size: 0.9rem;
+}
+
+.records-nested {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.records-subtabs {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 8px;
+}
+
+.records-subtab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  min-height: 30px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.records-subtab:hover {
+  background: #f1f5f9;
+}
+
+.records-subtab.active {
+  background: #0f172a;
+  color: #f8fafc;
+  border-color: #0f172a;
+}
+
+.linkish-btn {
+  background: none;
+  border: none;
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
+}
+
+.cash-form-modal .cash-form-lead {
+  margin: 0 0 12px;
+  font-size: 0.92rem;
   color: #475569;
-  line-height: 1.45;
+}
+
+.cash-payment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cash-payment-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-family: inherit;
+}
+
+.cash-review-modal {
+  max-width: 520px;
+}
+
+.cash-review-body {
+  margin-bottom: 14px;
+}
+
+.cash-review-body p {
+  margin: 8px 0;
+}
+
+.cash-review-email {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.cash-review-muted {
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+.cash-review-photo {
+  max-width: 100%;
+  max-height: 280px;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  margin-top: 8px;
+}
+
+.cash-review-actions {
+  flex-wrap: wrap;
 }
 
 .payment-choice-actions {
