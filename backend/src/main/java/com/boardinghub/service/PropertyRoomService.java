@@ -78,9 +78,50 @@ public class PropertyRoomService {
                                 room.getId(),
                                 room.getRoomNumber(),
                                 room.getMonthlyRate(),
-                                room.getEnrolledAt()
+                                room.getEnrolledAt(),
+                                computeCurrentBillingPaymentStatus(room.getTenant())
                         )))
                 .toList();
+    }
+
+    /**
+     * Same rules as {@link #getTenantCurrentRentSummary(String)}: paid this month vs calendar billing state.
+     */
+    private String computeCurrentBillingPaymentStatus(User tenant) {
+        YearMonth billingYm = YearMonth.now();
+        YearMonth nowYm = YearMonth.now();
+        LocalDateTime monthStart = billingYm.atDay(1).atStartOfDay();
+        LocalDateTime nextMonthStart = billingYm.plusMonths(1).atDay(1).atStartOfDay();
+        boolean paidThisBillingMonth = rentPaymentRepository.existsByTenantAndRecordedAtGreaterThanEqualAndRecordedAtLessThan(
+                tenant, monthStart, nextMonthStart);
+        if (paidThisBillingMonth) {
+            return "PAID";
+        }
+        if (billingYm.equals(nowYm)) {
+            return "PENDING";
+        }
+        if (billingYm.isBefore(nowYm)) {
+            return "OVERDUE";
+        }
+        return "UPCOMING";
+    }
+
+    /**
+     * Same payload as {@link #getTenantCurrentRentSummary(String)} for the tenant rent tab,
+     * but callable by the landlord for a tenant on their property.
+     */
+    @Transactional(readOnly = true)
+    public DashboardDtos.TenantCurrentRentDto getTenantCurrentRentSummaryForLandlord(String landlordEmail, Long tenantId) {
+        User landlord = getUserByEmail(landlordEmail);
+        requireRole(landlord, User.Role.LANDLORD);
+        User tenant = userRepository.findById(tenantId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tenant not found"));
+        Room room = roomRepository.findByTenant(tenant)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tenant is not enrolled in a room"));
+        if (!room.getProperty().getLandlord().getId().equals(landlord.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This tenant is not on your property");
+        }
+        return getTenantCurrentRentSummary(tenant.getEmail());
     }
 
     @Transactional
@@ -196,24 +237,9 @@ public class PropertyRoomService {
         User tenant = getUserByEmail(email);
         // Later: derive from open invoice; for now billing period is the current calendar month.
         YearMonth billingYm = YearMonth.now();
-        YearMonth nowYm = YearMonth.now();
         String billingMonth = billingYm.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH));
 
-        LocalDateTime monthStart = billingYm.atDay(1).atStartOfDay();
-        LocalDateTime nextMonthStart = billingYm.plusMonths(1).atDay(1).atStartOfDay();
-        boolean paidThisBillingMonth = rentPaymentRepository.existsByTenantAndRecordedAtGreaterThanEqualAndRecordedAtLessThan(
-                tenant, monthStart, nextMonthStart);
-
-        String status;
-        if (paidThisBillingMonth) {
-            status = "PAID";
-        } else if (billingYm.equals(nowYm)) {
-            status = "PENDING";
-        } else if (billingYm.isBefore(nowYm)) {
-            status = "OVERDUE";
-        } else {
-            status = "UPCOMING";
-        }
+        String status = computeCurrentBillingPaymentStatus(tenant);
 
         LocalDate today = LocalDate.now();
         LocalDate endOfBillingMonth = billingYm.atEndOfMonth();
