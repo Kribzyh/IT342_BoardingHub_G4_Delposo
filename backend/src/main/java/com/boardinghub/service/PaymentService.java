@@ -49,6 +49,7 @@ public class PaymentService {
     private final RoomRepository roomRepository;
     private final RentPaymentRepository rentPaymentRepository;
     private final DashboardSseService dashboardSseService;
+    private final CashPaymentService cashPaymentService;
     private final PayMongoProperties payMongoProperties;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -137,8 +138,10 @@ public class PaymentService {
 
         Optional<RentPayment> already = rentPaymentRepository.findByPaymongoPaymentIntentId(piId);
         if (already.isPresent()) {
-            notifyDashboardPaymentChanged(already.get());
-            return new PaymongoCompleteResponse(true, "Payment already recorded.", toDto(already.get()));
+            RentPayment existing = already.get();
+            cashPaymentService.removePendingCashRequestAfterOnlinePayment(existing.getTenant());
+            notifyDashboardPaymentChanged(existing);
+            return new PaymongoCompleteResponse(true, "Payment already recorded.", toDto(existing));
         }
 
         User tenant = userRepository.findByEmail(email)
@@ -180,6 +183,7 @@ public class PaymentService {
         rp.setPaymentMethodType(methodType);
         rp.setPaymongoStatus(status);
         RentPayment saved = rentPaymentRepository.save(rp);
+        cashPaymentService.removePendingCashRequestAfterOnlinePayment(tenant);
         notifyDashboardPaymentChanged(saved);
 
         return new PaymongoCompleteResponse(true, "Payment recorded.", toDto(saved));
