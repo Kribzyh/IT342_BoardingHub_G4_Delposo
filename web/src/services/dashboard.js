@@ -89,3 +89,42 @@ export const getLandlordPaymentRecords = async () => {
   const response = await api.get('/payments/landlord/records');
   return response.data;
 };
+
+export const getTenantCashStatus = async () => {
+  const response = await api.get('/payments/tenant/cash-status');
+  return response.data;
+};
+
+export const submitCashPaymentRequest = async ({ description, photo }) => {
+  const formData = new FormData();
+  if (description != null && String(description).trim() !== '') {
+    formData.append('description', String(description).trim());
+  }
+  if (photo) {
+    formData.append('photo', photo);
+  }
+  await api.post('/payments/cash/request', formData);
+};
+
+export const getLandlordCashRequests = async () => {
+  const response = await api.get('/payments/landlord/cash-requests');
+  return response.data;
+};
+
+export const getLandlordCashRequestDetail = async (id) => {
+  const response = await api.get(`/payments/landlord/cash-requests/${id}`);
+  return response.data;
+};
+
+export const acceptLandlordCashRequest = async (id) => {
+  await api.post(`/payments/landlord/cash-requests/${id}/accept`);
+};
+
+export const rejectLandlordCashRequest = async (id) => {
+  await api.post(`/payments/landlord/cash-requests/${id}/reject`);
+};
+
+export const getCashRequestPhotoBlob = async (id) => {
+  const response = await api.get(`/payments/cash-requests/${id}/photo`, { responseType: 'blob' });
+  return response.data;
+};
