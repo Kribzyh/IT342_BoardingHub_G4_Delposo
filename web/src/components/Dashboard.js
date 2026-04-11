@@ -146,6 +146,8 @@ const Dashboard = () => {
   const [cashReviewActionLoading, setCashReviewActionLoading] = useState(false);
   const [generatingRoomCode, setGeneratingRoomCode] = useState(false);
   const [codeCountdownTick, setCodeCountdownTick] = useState(0);
+  /** Landlord Properties → Room details: current-month payment status for selected room's tenant */
+  const [selectedRoomPaymentStatus, setSelectedRoomPaymentStatus] = useState(null);
   const landlordHydratedRef = useRef(false);
   const tenantRentPrefetchRef = useRef(false);
   const runLiveRefreshRef = useRef(async () => {});
@@ -511,6 +513,16 @@ const Dashboard = () => {
               tenantFilterPropertyId ? Number(tenantFilterPropertyId) : undefined
             );
           }
+          if (activeItem === 'properties' && selectedRoom?.tenant?.id) {
+            try {
+              const current = await getLandlordTenantCurrentRent(selectedRoom.tenant.id);
+              setSelectedRoomPaymentStatus(current.status ?? null);
+            } catch {
+              setSelectedRoomPaymentStatus(null);
+            }
+          } else if (activeItem === 'properties') {
+            setSelectedRoomPaymentStatus(null);
+          }
         }
       } catch {
         /* ignore transient errors */
@@ -521,10 +533,12 @@ const Dashboard = () => {
 
     const shouldPoll =
       (normalizedRole === 'tenant' && (activeItem === 'rent' || activeItem === 'records')) ||
-      (normalizedRole === 'landlord' && (activeItem === 'records' || activeItem === 'tenants'));
+      (normalizedRole === 'landlord' &&
+        (activeItem === 'records' || activeItem === 'tenants' || activeItem === 'properties'));
 
     if (!shouldPoll) return undefined;
 
+    runLiveRefresh();
     const intervalId = setInterval(runLiveRefresh, DASHBOARD_FALLBACK_POLL_MS);
     const onVisibility = () => {
       if (document.visibilityState === 'visible') {
@@ -537,7 +551,14 @@ const Dashboard = () => {
       clearInterval(intervalId);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [normalizedRole, activeItem, tenantFilterPropertyId]);
+  }, [
+    normalizedRole,
+    activeItem,
+    tenantFilterPropertyId,
+    selectedRoomId,
+    selectedPropertyId,
+    selectedRoom?.tenant?.id
+  ]);
 
   useEffect(() => {
     if (normalizedRole !== 'tenant' && normalizedRole !== 'landlord') return undefined;
@@ -1036,7 +1057,21 @@ const Dashboard = () => {
                             ) : null}
                           </div>
                         ) : null}
-                        {selectedRoom.tenant ? <div className="tenant-thumb-list"><h5>Tenant</h5><button type="button" className="tenant-thumb active">{selectedRoom.tenant.fullName}</button></div> : null}
+                        {selectedRoom.tenant ? (
+                          <div className="tenant-thumb-list">
+                            <h5>Tenant</h5>
+                            <button type="button" className="tenant-thumb tenant-thumb-inner active">
+                              <span className="tenant-thumb-name">{selectedRoom.tenant.fullName}</span>
+                              {selectedRoomPaymentStatus ? (
+                                <span
+                                  className={`tenant-list-payment tenant-list-payment--${(selectedRoomPaymentStatus || 'unknown').toLowerCase()}`}
+                                >
+                                  {formatRentStatus(selectedRoomPaymentStatus)}
+                                </span>
+                              ) : null}
+                            </button>
+                          </div>
+                        ) : null}
                       </>
                     ) : <p>Select a room to view details.</p>}
                     <div className="property-detail-actions">
