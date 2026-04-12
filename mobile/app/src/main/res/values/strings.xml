@@ -10,6 +10,9 @@
     <string name="field_name">Name</string>
     <string name="field_email">Email</string>
     <string name="field_password">Password</string>
+    <string name="field_role">Account role</string>
+    <string name="role_tenant">Tenant</string>
+    <string name="role_landlord">Landlord</string>
     <string name="create_account">Create account</string>
     <string name="register_password_hint">Use at least 8 characters for your password.</string>
     <string name="registration_success_title">You\'re all set</string>

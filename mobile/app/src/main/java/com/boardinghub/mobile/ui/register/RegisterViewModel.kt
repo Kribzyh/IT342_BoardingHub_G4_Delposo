@@ -15,7 +15,7 @@ class RegisterViewModel : ViewModel() {
     private val _events = MutableSharedFlow<RegisterUiEvent>(extraBufferCapacity = 1)
     val events = _events.asSharedFlow()
 
-    fun register(name: String, email: String, password: String) {
+    fun register(name: String, email: String, password: String, role: RegisterAccountRole) {
         viewModelScope.launch {
             val nameTrim = name.trim()
             val emailTrim = email.trim()
@@ -32,7 +32,7 @@ class RegisterViewModel : ViewModel() {
                         email = emailTrim,
                         password = password,
                         fullName = nameTrim,
-                        role = "TENANT"
+                        role = role.apiValue
                     )
                 )
                 if (response.isSuccessful) {

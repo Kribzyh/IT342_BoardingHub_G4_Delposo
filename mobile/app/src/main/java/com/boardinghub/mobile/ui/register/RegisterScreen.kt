@@ -17,7 +17,11 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -59,6 +63,8 @@ fun RegisterScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var accountRole by remember { mutableStateOf(RegisterAccountRole.TENANT) }
+    var roleMenuExpanded by remember { mutableStateOf(false) }
 
     var nameError by remember { mutableStateOf<String?>(null) }
     var emailError by remember { mutableStateOf<String?>(null) }
@@ -203,10 +209,49 @@ fun RegisterScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            ExposedDropdownMenuBox(
+                expanded = roleMenuExpanded,
+                onExpandedChange = { if (!isLoading) roleMenuExpanded = it }
+            ) {
+                OutlinedTextField(
+                    value = stringResource(accountRole.labelRes),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text(stringResource(R.string.field_role)) },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = roleMenuExpanded)
+                    },
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                    modifier = Modifier
+                        .menuAnchor(
+                            type = MenuAnchorType.PrimaryNotEditable,
+                            enabled = !isLoading
+                        )
+                        .fillMaxWidth(),
+                    enabled = !isLoading
+                )
+                ExposedDropdownMenu(
+                    expanded = roleMenuExpanded,
+                    onDismissRequest = { roleMenuExpanded = false }
+                ) {
+                    RegisterAccountRole.entries.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(stringResource(option.labelRes)) },
+                            onClick = {
+                                accountRole = option
+                                roleMenuExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(28.dp))
 
             Button(
-                onClick = { viewModel.register(name, email, password) },
+                onClick = { viewModel.register(name, email, password, accountRole) },
                 enabled = !isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
