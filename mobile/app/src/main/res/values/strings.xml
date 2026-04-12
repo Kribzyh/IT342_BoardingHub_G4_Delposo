@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BoardingHub</string>
+    <string name="tagline">Track and Rent Easily</string>
+    <string name="login">Login</string>
+    <string name="register">Register</string>
+    <string name="placeholder_auth_message">Auth Screen</string>
+</resources>
