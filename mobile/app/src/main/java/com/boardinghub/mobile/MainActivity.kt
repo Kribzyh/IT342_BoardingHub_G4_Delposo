@@ -10,9 +10,10 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.boardinghub.mobile.R
+import com.boardinghub.mobile.data.AuthPreferences
 import com.boardinghub.mobile.ui.LandingScreen
-import com.boardinghub.mobile.ui.PlaceholderAuthScreen
+import com.boardinghub.mobile.ui.SessionHomeScreen
+import com.boardinghub.mobile.ui.login.LoginScreen
 import com.boardinghub.mobile.ui.register.RegisterScreen
 import com.boardinghub.mobile.ui.register.RegistrationSuccessScreen
 import com.boardinghub.mobile.ui.theme.BoardingHubTheme
@@ -20,6 +21,7 @@ import com.boardinghub.mobile.ui.theme.BoardingHubTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AuthPreferences.init(applicationContext)
         enableEdgeToEdge()
         setContent {
             BoardingHubTheme {
@@ -36,9 +38,24 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         composable("login") {
-                            PlaceholderAuthScreen(
-                                titleRes = R.string.login,
-                                onBack = { navController.popBackStack() }
+                            LoginScreen(
+                                onBack = { navController.popBackStack() },
+                                onLoginSuccess = {
+                                    navController.navigate("home") {
+                                        popUpTo("landing") { inclusive = true }
+                                        launchSingleTop = true
+                                    }
+                                }
+                            )
+                        }
+                        composable("home") {
+                            SessionHomeScreen(
+                                onLoggedOut = {
+                                    navController.navigate("landing") {
+                                        popUpTo(navController.graph.id) { inclusive = true }
+                                        launchSingleTop = true
+                                    }
+                                }
                             )
                         }
                         composable("register") {

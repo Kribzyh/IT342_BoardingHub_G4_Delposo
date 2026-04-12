@@ -18,4 +18,9 @@
     <string name="registration_success_title">You\'re all set</string>
     <string name="registration_success_message">Your account was created successfully. Sign in to continue.</string>
     <string name="go_to_login">Go to login</string>
+    <string name="login_subtitle">Sign in with your BoardingHub account.</string>
+    <string name="sign_in">Sign in</string>
+    <string name="home_signed_in_title">You are signed in</string>
+    <string name="home_signed_in_fallback_name">Welcome</string>
+    <string name="log_out">Log out</string>
 </resources>

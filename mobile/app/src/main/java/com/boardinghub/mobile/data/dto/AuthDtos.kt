@@ -9,6 +9,11 @@ data class RegisterRequest(
     val role: String = "TENANT"
 )
 
+data class LoginRequest(
+    val email: String,
+    val password: String
+)
+
 data class AuthResponse(
     @SerializedName("accessToken") val accessToken: String?,
     @SerializedName("refreshToken") val refreshToken: String?,
