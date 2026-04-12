@@ -23,4 +23,19 @@
     <string name="home_signed_in_title">You are signed in</string>
     <string name="home_signed_in_fallback_name">Welcome</string>
     <string name="log_out">Log out</string>
+    <string name="login_with_google_label">Login with Google</string>
+    <string name="login_with_google_cd">Sign in with Google</string>
+    <string name="google_sign_in_failed">Google sign-in failed</string>
+    <string name="google_sign_in_no_token">Could not get a Google sign-in token</string>
+    <string name="google_complete_profile_title">Complete your profile</string>
+    <string name="or_divider">or</string>
+    <string name="submit">Submit</string>
+    <string name="cancel">Cancel</string>
+    <string name="google_error_developer">Google Sign-In is not configured for this app build. In Google Cloud Console, create an Android OAuth client with package com.boardinghub.mobile and add your debug (or release) keystore SHA-1 fingerprint. The Web client ID in the app must stay as the \"Web application\" client used for requestIdToken.</string>
+    <string name="google_error_network">Network error during Google Sign-In. Check your connection and try again.</string>
+    <string name="google_error_generic">Google Sign-In failed (code %1$d). Check Google Cloud OAuth settings and try again.</string>
+    <string name="google_complete_profile_body">This Google account is new to BoardingHub. Enter your details to finish registration.</string>
+    <string name="google_name_too_short">Enter at least 2 characters for your name.</string>
+    <string name="google_still_needs_profile">Could not complete registration. Try again or contact support.</string>
+    <string name="google_finish_registration">Register and continue</string>
 </resources>

@@ -16,6 +16,13 @@ android {
         versionName = "1.0"
         // Android emulator reaches host machine at 10.0.2.2; physical devices need your LAN IP.
         buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:8080/\"")
+        // Web client ID (OAuth 2.0 Client IDs → Web application). Also add an Android client in
+        // Google Cloud Console with this appId + your debug/release SHA-1 or Sign-In will fail.
+        buildConfigField(
+            "String",
+            "GOOGLE_WEB_CLIENT_ID",
+            "\"952797323838-un3au8n4a4aljrb525a435q919ed5keb.apps.googleusercontent.com\""
+        )
     }
 
     buildTypes {
@@ -58,6 +65,8 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    implementation("com.google.android.gms:play-services-auth:21.3.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

@@ -14,6 +14,12 @@ data class LoginRequest(
     val password: String
 )
 
+data class GoogleAuthRequest(
+    val token: String,
+    val fullName: String? = null,
+    val role: String? = null
+)
+
 data class AuthResponse(
     @SerializedName("accessToken") val accessToken: String?,
     @SerializedName("refreshToken") val refreshToken: String?,

@@ -13,6 +13,7 @@ import androidx.navigation.compose.rememberNavController
 import com.boardinghub.mobile.data.AuthPreferences
 import com.boardinghub.mobile.ui.LandingScreen
 import com.boardinghub.mobile.ui.SessionHomeScreen
+import com.boardinghub.mobile.ui.auth.GoogleCompleteProfileScreen
 import com.boardinghub.mobile.ui.login.LoginScreen
 import com.boardinghub.mobile.ui.register.RegisterScreen
 import com.boardinghub.mobile.ui.register.RegistrationSuccessScreen
@@ -45,6 +46,11 @@ class MainActivity : ComponentActivity() {
                                         popUpTo("landing") { inclusive = true }
                                         launchSingleTop = true
                                     }
+                                },
+                                onGoogleProfileRequired = {
+                                    navController.navigate("google_complete_profile") {
+                                        launchSingleTop = true
+                                    }
                                 }
                             )
                         }
@@ -53,6 +59,17 @@ class MainActivity : ComponentActivity() {
                                 onLoggedOut = {
                                     navController.navigate("landing") {
                                         popUpTo(navController.graph.id) { inclusive = true }
+                                        launchSingleTop = true
+                                    }
+                                }
+                            )
+                        }
+                        composable("google_complete_profile") {
+                            GoogleCompleteProfileScreen(
+                                onBack = { navController.popBackStack() },
+                                onRegistrationSuccess = {
+                                    navController.navigate("home") {
+                                        popUpTo("landing") { inclusive = true }
                                         launchSingleTop = true
                                     }
                                 }

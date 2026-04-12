@@ -2,6 +2,7 @@ package com.boardinghub.mobile.ui.login
 
 import android.app.Application
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +20,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -36,6 +38,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -45,6 +48,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.boardinghub.mobile.R
+import com.boardinghub.mobile.ui.auth.LoginWithGoogleSection
 import com.boardinghub.mobile.ui.theme.NavyPrimary
 import kotlinx.coroutines.launch
 
@@ -53,6 +57,7 @@ import kotlinx.coroutines.launch
 fun LoginScreen(
     onBack: () -> Unit,
     onLoginSuccess: () -> Unit,
+    onGoogleProfileRequired: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LoginViewModel = viewModel(
         factory = LoginViewModelFactory(
@@ -70,6 +75,7 @@ fun LoginScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var isLoading by remember { mutableStateOf(false) }
+    var googleBusy by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
@@ -107,7 +113,7 @@ fun LoginScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.login)) },
                 navigationIcon = {
-                    IconButton(onClick = onBack, enabled = !isLoading) {
+                    IconButton(onClick = onBack, enabled = !isLoading && !googleBusy) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.back)
@@ -145,7 +151,7 @@ fun LoginScreen(
                 },
                 label = { Text(stringResource(R.string.field_email)) },
                 singleLine = true,
-                enabled = !isLoading,
+                enabled = !isLoading && !googleBusy,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 isError = emailError != null,
                 supportingText = emailError?.let { { Text(it) } },
@@ -162,7 +168,7 @@ fun LoginScreen(
                 },
                 label = { Text(stringResource(R.string.field_password)) },
                 singleLine = true,
-                enabled = !isLoading,
+                enabled = !isLoading && !googleBusy,
                 visualTransformation = if (passwordVisible) {
                     VisualTransformation.None
                 } else {
@@ -170,7 +176,10 @@ fun LoginScreen(
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 trailingIcon = {
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    IconButton(
+                        onClick = { passwordVisible = !passwordVisible },
+                        enabled = !isLoading && !googleBusy
+                    ) {
                         Icon(
                             imageVector = if (passwordVisible) {
                                 Icons.Filled.VisibilityOff
@@ -190,7 +199,7 @@ fun LoginScreen(
 
             Button(
                 onClick = { viewModel.login(email, password) },
-                enabled = !isLoading,
+                enabled = !isLoading && !googleBusy,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
@@ -213,6 +222,32 @@ fun LoginScreen(
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                HorizontalDivider(modifier = Modifier.weight(1f))
+                Text(
+                    text = stringResource(R.string.or_divider),
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                HorizontalDivider(modifier = Modifier.weight(1f))
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            LoginWithGoogleSection(
+                snackbarHostState = snackbarHostState,
+                enabled = !isLoading && !googleBusy,
+                onBusyChange = { googleBusy = it },
+                onAuthSuccess = onLoginSuccess,
+                onNavigateToCompleteGoogleProfile = onGoogleProfileRequired
+            )
         }
     }
 }
