@@ -5,4 +5,14 @@
     <string name="login">Login</string>
     <string name="register">Register</string>
     <string name="placeholder_auth_message">Auth Screen</string>
+    <string name="back">Back</string>
+    <string name="register_subtitle">Create your account to get started.</string>
+    <string name="field_name">Name</string>
+    <string name="field_email">Email</string>
+    <string name="field_password">Password</string>
+    <string name="create_account">Create account</string>
+    <string name="register_password_hint">Use at least 8 characters for your password.</string>
+    <string name="registration_success_title">You\'re all set</string>
+    <string name="registration_success_message">Your account was created successfully. Sign in to continue.</string>
+    <string name="go_to_login">Go to login</string>
 </resources>

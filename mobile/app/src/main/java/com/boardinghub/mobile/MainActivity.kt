@@ -13,6 +13,8 @@ import androidx.navigation.compose.rememberNavController
 import com.boardinghub.mobile.R
 import com.boardinghub.mobile.ui.LandingScreen
 import com.boardinghub.mobile.ui.PlaceholderAuthScreen
+import com.boardinghub.mobile.ui.register.RegisterScreen
+import com.boardinghub.mobile.ui.register.RegistrationSuccessScreen
 import com.boardinghub.mobile.ui.theme.BoardingHubTheme
 
 class MainActivity : ComponentActivity() {
@@ -40,9 +42,24 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         composable("register") {
-                            PlaceholderAuthScreen(
-                                titleRes = R.string.register,
-                                onBack = { navController.popBackStack() }
+                            RegisterScreen(
+                                onBack = { navController.popBackStack() },
+                                onRegisterSuccess = {
+                                    navController.navigate("register_success") {
+                                        popUpTo("register") { inclusive = true }
+                                        launchSingleTop = true
+                                    }
+                                }
+                            )
+                        }
+                        composable("register_success") {
+                            RegistrationSuccessScreen(
+                                onGoToLogin = {
+                                    navController.navigate("login") {
+                                        popUpTo("landing") { inclusive = false }
+                                        launchSingleTop = true
+                                    }
+                                }
                             )
                         }
                     }
