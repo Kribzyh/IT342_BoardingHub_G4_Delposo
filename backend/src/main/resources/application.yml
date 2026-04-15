@@ -1,8 +1,4 @@
 spring:
-  servlet:
-    multipart:
-      max-file-size: 5MB
-      max-request-size: 6MB
   security:
     oauth2:
       client:
@@ -44,7 +40,6 @@ jwt:
   expiration: 3600000
 
 app:
-  upload-dir: ${APP_UPLOAD_DIR:uploads}
   cors:
     allowed-origins: http://localhost:3000,http://localhost:3001
   oauth2:

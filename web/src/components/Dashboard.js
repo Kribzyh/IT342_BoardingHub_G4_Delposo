@@ -1,7 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import RoleSidebar from './layout/RoleSidebar';
-import api from '../services/api';
 import {
   createProperty,
   createRoom,
@@ -18,13 +17,6 @@ import {
   completePaymongoPayment,
   getTenantPaymentRecords,
   getLandlordPaymentRecords,
-  getTenantCashStatus,
-  submitCashPaymentRequest,
-  getLandlordCashRequests,
-  getLandlordCashRequestDetail,
-  acceptLandlordCashRequest,
-  rejectLandlordCashRequest,
-  getCashRequestPhotoBlob,
   updateProperty,
   updateRoom
 } from '../services/dashboard';
@@ -69,12 +61,6 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const PAYMENT_COMPLETE_INITIAL_DELAY_MS = 2000;
 const PAYMENT_COMPLETE_RETRY_DELAY_MS = 3000;
 const PAYMENT_COMPLETE_MAX_ATTEMPTS = 6;
-
-/** Infrequent fallback poll if SSE is blocked or drops (primary updates come from /dashboard/stream). */
-const DASHBOARD_FALLBACK_POLL_MS = 120000;
-
-/** Transient cash-payment messages (submit success / already pending) auto-hide. */
-const CASH_PAYMENT_NOTICE_DISMISS_MS = 6000;
 
 function isRetryablePaymentCompleteError(error) {
   if (!error) return false;
@@ -131,24 +117,10 @@ const Dashboard = () => {
   const [paymentSyncMessage, setPaymentSyncMessage] = useState('');
   const [paymentChoiceOpen, setPaymentChoiceOpen] = useState(false);
   const [cashPaymentNotice, setCashPaymentNotice] = useState('');
-  const [tenantCashPending, setTenantCashPending] = useState(false);
-  const [cashFormOpen, setCashFormOpen] = useState(false);
-  const [cashFormDescription, setCashFormDescription] = useState('');
-  const [cashPhotoFile, setCashPhotoFile] = useState(null);
-  const [cashFormSubmitting, setCashFormSubmitting] = useState(false);
-  const [cashFormError, setCashFormError] = useState('');
-  const [recordsSubTab, setRecordsSubTab] = useState('payments');
-  const [landlordCashRequests, setLandlordCashRequests] = useState([]);
-  const [cashReviewOpen, setCashReviewOpen] = useState(false);
-  const [cashReviewDetail, setCashReviewDetail] = useState(null);
-  const [cashReviewPhotoUrl, setCashReviewPhotoUrl] = useState('');
-  const [cashReviewLoading, setCashReviewLoading] = useState(false);
-  const [cashReviewActionLoading, setCashReviewActionLoading] = useState(false);
   const [generatingRoomCode, setGeneratingRoomCode] = useState(false);
   const [codeCountdownTick, setCodeCountdownTick] = useState(0);
   const landlordHydratedRef = useRef(false);
   const tenantRentPrefetchRef = useRef(false);
-  const runLiveRefreshRef = useRef(async () => {});
   const prevNormalizedRoleRef = useRef(normalizedRole);
 
   useEffect(() => {
@@ -253,11 +225,6 @@ const Dashboard = () => {
     );
     setLandlordTenants(enriched);
   };
-
-  const refreshTenantRef = useRef(refreshTenant);
-  refreshTenantRef.current = refreshTenant;
-  const refreshLandlordTenantsRef = useRef(refreshLandlordTenants);
-  refreshLandlordTenantsRef.current = refreshLandlordTenants;
 
   useEffect(() => {
     if (location.pathname === '/dashboard/properties/new' || location.pathname === '/dashboard/rooms/new') setActiveItem('properties');
@@ -364,20 +331,7 @@ const Dashboard = () => {
             const res = await completePaymongoPayment(pi);
             if (!cancelled) {
               setPaymentSyncMessage(res.message || 'Payment saved to your records.');
-              if (normalizedRole === 'tenant') {
-                await refreshTenantRef.current({ silent: true });
-                try {
-                  const s = await getTenantCashStatus();
-                  setTenantCashPending(Boolean(s.hasPendingRequest));
-                } catch {
-                  /* ignore */
-                }
-                try {
-                  setPaymentRecords(await getTenantPaymentRecords());
-                } catch {
-                  /* ignore */
-                }
-              }
+              if (normalizedRole === 'tenant') await refreshTenant({ silent: true });
             }
             break;
           } catch (error) {
@@ -433,167 +387,6 @@ const Dashboard = () => {
     };
   }, [activeItem, normalizedRole]);
 
-  useEffect(() => {
-    if (normalizedRole !== 'tenant') {
-      setTenantCashPending(false);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      try {
-        const s = await getTenantCashStatus();
-        if (!cancelled) setTenantCashPending(Boolean(s.hasPendingRequest));
-      } catch {
-        if (!cancelled) setTenantCashPending(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [activeItem, normalizedRole]);
-
-  useEffect(() => {
-    if (normalizedRole !== 'landlord' || activeItem !== 'records') return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const list = await getLandlordCashRequests();
-        if (!cancelled) setLandlordCashRequests(list);
-      } catch {
-        if (!cancelled) setLandlordCashRequests([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [normalizedRole, activeItem]);
-
-  useEffect(() => {
-    if (!cashPaymentNotice) return undefined;
-    const id = window.setTimeout(() => setCashPaymentNotice(''), CASH_PAYMENT_NOTICE_DISMISS_MS);
-    return () => window.clearTimeout(id);
-  }, [cashPaymentNotice]);
-
-  useEffect(() => {
-    const runLiveRefresh = async () => {
-      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
-      try {
-        if (normalizedRole === 'tenant') {
-          if (activeItem === 'rent' || activeItem === 'records') {
-            await refreshTenantRef.current({ silent: true });
-            try {
-              const s = await getTenantCashStatus();
-              setTenantCashPending(Boolean(s.hasPendingRequest));
-            } catch {
-              /* ignore */
-            }
-            try {
-              setPaymentRecords(await getTenantPaymentRecords());
-            } catch {
-              /* ignore */
-            }
-          }
-        } else if (normalizedRole === 'landlord') {
-          if (activeItem === 'records') {
-            try {
-              setPaymentRecords(await getLandlordPaymentRecords());
-            } catch {
-              /* ignore */
-            }
-            try {
-              setLandlordCashRequests(await getLandlordCashRequests());
-            } catch {
-              /* ignore */
-            }
-          }
-          if (activeItem === 'tenants') {
-            await refreshLandlordTenantsRef.current(
-              tenantFilterPropertyId ? Number(tenantFilterPropertyId) : undefined
-            );
-          }
-        }
-      } catch {
-        /* ignore transient errors */
-      }
-    };
-
-    runLiveRefreshRef.current = runLiveRefresh;
-
-    const shouldPoll =
-      (normalizedRole === 'tenant' && (activeItem === 'rent' || activeItem === 'records')) ||
-      (normalizedRole === 'landlord' && (activeItem === 'records' || activeItem === 'tenants'));
-
-    if (!shouldPoll) return undefined;
-
-    const intervalId = setInterval(runLiveRefresh, DASHBOARD_FALLBACK_POLL_MS);
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        runLiveRefresh();
-      }
-    };
-    document.addEventListener('visibilitychange', onVisibility);
-
-    return () => {
-      clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', onVisibility);
-    };
-  }, [normalizedRole, activeItem, tenantFilterPropertyId]);
-
-  useEffect(() => {
-    if (normalizedRole !== 'tenant' && normalizedRole !== 'landlord') return undefined;
-    const token = localStorage.getItem('token');
-    if (!token) return undefined;
-    const base = String(api.defaults.baseURL || '').replace(/\/$/, '');
-    const url = `${base}/dashboard/stream?token=${encodeURIComponent(token)}`;
-    let es;
-    try {
-      es = new EventSource(url);
-    } catch {
-      return undefined;
-    }
-    const onRefresh = () => {
-      const fn = runLiveRefreshRef.current;
-      if (typeof fn === 'function') fn();
-    };
-    es.addEventListener('refresh', onRefresh);
-    return () => {
-      es.removeEventListener('refresh', onRefresh);
-      es.close();
-    };
-  }, [normalizedRole]);
-
-  useEffect(() => {
-    if (!cashReviewOpen || !cashReviewDetail?.hasPhoto) {
-      setCashReviewPhotoUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev);
-        return '';
-      });
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      try {
-        const blob = await getCashRequestPhotoBlob(cashReviewDetail.id);
-        if (cancelled) return;
-        const url = URL.createObjectURL(blob);
-        setCashReviewPhotoUrl((prev) => {
-          if (prev) URL.revokeObjectURL(prev);
-          return url;
-        });
-      } catch {
-        if (!cancelled) {
-          setCashReviewPhotoUrl((prev) => {
-            if (prev) URL.revokeObjectURL(prev);
-            return '';
-          });
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [cashReviewOpen, cashReviewDetail?.id, cashReviewDetail?.hasPhoto]);
-
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -604,13 +397,6 @@ const Dashboard = () => {
     setPaymentSyncMessage('');
     setPaymentChoiceOpen(false);
     setCashPaymentNotice('');
-    setCashFormOpen(false);
-    setCashFormDescription('');
-    setCashPhotoFile(null);
-    setCashFormError('');
-    setRecordsSubTab('payments');
-    setCashReviewOpen(false);
-    setCashReviewDetail(null);
     setShowActions(false);
     setSelectedPropertyId(null);
     setSelectedRoomId(null);
@@ -701,86 +487,9 @@ const Dashboard = () => {
 
   const selectCashPayment = () => {
     setPaymentChoiceOpen(false);
-    setPaymentError('');
-    setCashFormError('');
-    if (tenantCashPending) {
-      setCashPaymentNotice(
-        'You already have a cash payment request waiting for your landlord to review. You can submit another one only after they accept or reject it.'
-      );
-      return;
-    }
-    setCashFormDescription('');
-    setCashPhotoFile(null);
-    setCashFormOpen(true);
-  };
-
-  const handleSubmitCashForm = async (e) => {
-    e.preventDefault();
-    setCashFormSubmitting(true);
-    setCashFormError('');
-    try {
-      await submitCashPaymentRequest({ description: cashFormDescription, photo: cashPhotoFile });
-      setCashFormOpen(false);
-      setCashPaymentNotice('Cash payment request submitted. Your landlord will review it from their Records tab.');
-      const s = await getTenantCashStatus();
-      setTenantCashPending(Boolean(s.hasPendingRequest));
-    } catch (error) {
-      const msg = error.response?.data?.message || error.response?.data?.error || error.message;
-      setCashFormError(typeof msg === 'string' ? msg : 'Could not submit cash request.');
-    } finally {
-      setCashFormSubmitting(false);
-    }
-  };
-
-  const openLandlordCashReview = async (id) => {
-    setCashReviewLoading(true);
-    setCashReviewOpen(true);
-    setCashReviewDetail(null);
-    try {
-      const detail = await getLandlordCashRequestDetail(id);
-      setCashReviewDetail(detail);
-    } catch {
-      setCashReviewOpen(false);
-      alert('Could not load this cash request.');
-    } finally {
-      setCashReviewLoading(false);
-    }
-  };
-
-  const closeLandlordCashReview = () => {
-    setCashReviewOpen(false);
-    setCashReviewDetail(null);
-  };
-
-  const handleAcceptCashRequest = async () => {
-    if (!cashReviewDetail) return;
-    setCashReviewActionLoading(true);
-    try {
-      await acceptLandlordCashRequest(cashReviewDetail.id);
-      setPaymentRecords(await getLandlordPaymentRecords());
-      setLandlordCashRequests(await getLandlordCashRequests());
-      closeLandlordCashReview();
-    } catch (error) {
-      const msg = error.response?.data?.message || error.message;
-      alert(typeof msg === 'string' ? msg : 'Could not accept.');
-    } finally {
-      setCashReviewActionLoading(false);
-    }
-  };
-
-  const handleRejectCashRequest = async () => {
-    if (!cashReviewDetail) return;
-    setCashReviewActionLoading(true);
-    try {
-      await rejectLandlordCashRequest(cashReviewDetail.id);
-      setLandlordCashRequests(await getLandlordCashRequests());
-      closeLandlordCashReview();
-    } catch (error) {
-      const msg = error.response?.data?.message || error.message;
-      alert(typeof msg === 'string' ? msg : 'Could not reject.');
-    } finally {
-      setCashReviewActionLoading(false);
-    }
+    setCashPaymentNotice(
+      'Cash payment: pay your landlord in person. This app only tracks online (GCash/Maya) payments automatically.'
+    );
   };
 
   const handleConfirmDelete = async () => {
@@ -859,115 +568,25 @@ const Dashboard = () => {
             ) : null}
             {isRecords ? (
               <div className="payment-records-section">
-                {normalizedRole === 'landlord' ? (
-                  <div className="records-nested">
-                    <div className="records-subtabs" role="tablist" aria-label="Records views">
-                      <button
-                        type="button"
-                        role="tab"
-                        aria-selected={recordsSubTab === 'payments'}
-                        aria-label="Payment records"
-                        className={`records-subtab ${recordsSubTab === 'payments' ? 'active' : ''}`}
-                        onClick={() => setRecordsSubTab('payments')}
-                      >
-                        Payments
-                      </button>
-                      <button
-                        type="button"
-                        role="tab"
-                        aria-selected={recordsSubTab === 'cash'}
-                        aria-label={`Payment requests, ${landlordCashRequests.length} pending`}
-                        className={`records-subtab ${recordsSubTab === 'cash' ? 'active' : ''}`}
-                        onClick={() => setRecordsSubTab('cash')}
-                      >
-                        Payment requests ({landlordCashRequests.length})
-                      </button>
-                    </div>
-                    {recordsSubTab === 'payments' ? (
-                      paymentRecords.length ? (
-                        <table className="payment-records-table">
-                          <thead>
-                            <tr>
-                              <th>Date</th>
-                              <th>Tenant</th>
-                              <th>Property</th>
-                              <th>Room</th>
-                              <th>Amount</th>
-                              <th>Method</th>
-                              <th>Status</th>
-                              <th>Reference</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {paymentRecords.map((row) => (
-                              <tr key={row.id}>
-                                <td>{formatRecordedAt(row.recordedAt)}</td>
-                                <td>{row.tenantName}</td>
-                                <td>{row.propertyName}</td>
-                                <td>{row.roomNumber}</td>
-                                <td>{formatMoney(row.amountPesos)} {row.currency || 'PHP'}</td>
-                                <td>{row.paymentMethodType || '-'}</td>
-                                <td>{row.paymongoStatus || '-'}</td>
-                                <td className="payment-ref-cell"><code>{row.paymongoPaymentIntentId}</code></td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      ) : (
-                        <p>No payment records yet.</p>
-                      )
-                    ) : landlordCashRequests.length ? (
-                      <table className="payment-records-table cash-requests-table">
-                        <thead>
-                          <tr>
-                            <th>Submitted</th>
-                            <th>Tenant</th>
-                            <th>Property</th>
-                            <th>Room</th>
-                            <th>Photo</th>
-                            <th />
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {landlordCashRequests.map((row) => (
-                            <tr key={row.id}>
-                              <td>{formatRecordedAt(row.submittedAt)}</td>
-                              <td>{row.tenantName}</td>
-                              <td>{row.propertyName}</td>
-                              <td>{row.roomNumber}</td>
-                              <td>{row.hasPhoto ? 'Yes' : '—'}</td>
-                              <td>
-                                <button type="button" className="linkish-btn" onClick={() => openLandlordCashReview(row.id)}>
-                                  Review
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    ) : (
-                      <p>No pending cash payment requests.</p>
-                    )}
-                  </div>
-                ) : paymentRecords.length ? (
+                {paymentRecords.length ? (
                   <table className="payment-records-table">
                     <thead>
                       <tr>
                         <th>Date</th>
-                        <th>Landlord</th>
+                        {normalizedRole === 'landlord' ? <th>Tenant</th> : <th>Landlord</th>}
                         <th>Property</th>
                         <th>Room</th>
                         <th>Amount</th>
                         <th>Method</th>
                         <th>Status</th>
-                        <th>Reference</th>
+                        <th>PayMongo ref.</th>
                       </tr>
                     </thead>
                     <tbody>
                       {paymentRecords.map((row) => (
                         <tr key={row.id}>
                           <td>{formatRecordedAt(row.recordedAt)}</td>
-                          <td>{row.landlordName}</td>
+                          <td>{normalizedRole === 'landlord' ? row.tenantName : row.landlordName}</td>
                           <td>{row.propertyName}</td>
                           <td>{row.roomNumber}</td>
                           <td>{formatMoney(row.amountPesos)} {row.currency || 'PHP'}</td>
@@ -1131,11 +750,6 @@ const Dashboard = () => {
                 <div className="tenant-rent-view">
                   <div className="tenant-rent-column">
                     <h3>This Month&apos;s Payment</h3>
-                    {tenantCashPending ? (
-                      <p className="cash-pending-notice" role="status">
-                        A cash payment request is waiting for your landlord to review. You cannot send another until they accept or reject it.
-                      </p>
-                    ) : null}
                     <p><strong>Billing Month:</strong> {tenantRent.currentBillingMonth || '-'}</p>
                     <p><strong>Status:</strong> {formatRentStatus(tenantRent.currentInvoiceStatus)}</p>
                     <p><strong>Days left in billing month:</strong> {tenantRent.currentRemainingDaysInBillingMonth ?? '-'}</p>
@@ -1189,6 +803,14 @@ const Dashboard = () => {
           <div className="confirm-modal-backdrop">
             <div className="confirm-modal payment-choice-modal" role="dialog" aria-labelledby="payment-choice-title">
               <h3 id="payment-choice-title">Payment method</h3>
+              <p className="payment-choice-hint">
+                Amount is your room&apos;s monthly rate from the server. PayMongo uses centavos (rate × 100), e.g. ₱
+                {tenantRent?.monthlyRate != null ? Number(tenantRent.monthlyRate).toLocaleString('en-PH') : '—'} →{' '}
+                {tenantRent?.monthlyRate != null
+                  ? `${(Math.round(Number(tenantRent.monthlyRate) * 100)).toLocaleString('en-PH')} centavos`
+                  : '—'}
+                .
+              </p>
               <div className="payment-choice-actions">
                 <button type="button" className="primary-btn" onClick={runOnlineCheckout} disabled={paymentLoading}>
                   Online (GCash / Maya)
@@ -1200,113 +822,6 @@ const Dashboard = () => {
                   Cancel
                 </button>
               </div>
-            </div>
-          </div>
-        ) : null}
-
-        {cashFormOpen ? (
-          <div className="confirm-modal-backdrop">
-            <div className="confirm-modal cash-form-modal" role="dialog" aria-labelledby="cash-form-title">
-              <h3 id="cash-form-title">Pay with cash</h3>
-              <p className="cash-form-lead">
-                Submit a request for your landlord to confirm. Optional note and proof photo.
-              </p>
-              <form className="cash-payment-form" onSubmit={handleSubmitCashForm}>
-                <label htmlFor="cash-desc">Description (optional)</label>
-                <textarea
-                  id="cash-desc"
-                  value={cashFormDescription}
-                  onChange={(e) => setCashFormDescription(e.target.value)}
-                  rows={3}
-                  maxLength={2000}
-                  placeholder="e.g. Paid in person on …"
-                />
-                <label htmlFor="cash-photo">Attach photo (optional)</label>
-                <input
-                  id="cash-photo"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  onChange={(e) => setCashPhotoFile(e.target.files?.[0] ?? null)}
-                />
-                {cashFormError ? (
-                  <p className="payment-error" role="alert">
-                    {cashFormError}
-                  </p>
-                ) : null}
-                <div className="form-actions">
-                  <button type="button" className="secondary-btn" disabled={cashFormSubmitting} onClick={() => setCashFormOpen(false)}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="primary-btn" disabled={cashFormSubmitting}>
-                    {cashFormSubmitting ? 'Submitting…' : 'Submit request'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        ) : null}
-
-        {cashReviewOpen ? (
-          <div className="confirm-modal-backdrop">
-            <div className="confirm-modal cash-review-modal" role="dialog" aria-labelledby="cash-review-title">
-              <h3 id="cash-review-title">Review cash payment</h3>
-              {cashReviewLoading ? (
-                <p>Loading…</p>
-              ) : cashReviewDetail ? (
-                <>
-                  <div className="cash-review-body">
-                    <p>
-                      <strong>Tenant:</strong> {cashReviewDetail.tenantName}{' '}
-                      <span className="cash-review-email">({cashReviewDetail.tenantEmail})</span>
-                    </p>
-                    <p>
-                      <strong>Property / room:</strong> {cashReviewDetail.propertyName} — Room {cashReviewDetail.roomNumber}
-                    </p>
-                    <p>
-                      <strong>Monthly rate:</strong> ₱{cashReviewDetail.monthlyRatePesos}
-                    </p>
-                    {cashReviewDetail.description ? (
-                      <p>
-                        <strong>Tenant note:</strong> {cashReviewDetail.description}
-                      </p>
-                    ) : (
-                      <p className="cash-review-muted">No description provided.</p>
-                    )}
-                    {cashReviewDetail.hasPhoto ? (
-                      cashReviewPhotoUrl ? (
-                        <img src={cashReviewPhotoUrl} alt="Tenant payment proof" className="cash-review-photo" />
-                      ) : (
-                        <p className="cash-review-muted">Loading image…</p>
-                      )
-                    ) : (
-                      <p className="cash-review-muted">No photo attached.</p>
-                    )}
-                  </div>
-                  <div className="form-actions cash-review-actions">
-                    <button
-                      type="button"
-                      className="primary-btn"
-                      onClick={handleAcceptCashRequest}
-                      disabled={cashReviewActionLoading || cashReviewDetail.status !== 'PENDING'}
-                    >
-                      {cashReviewActionLoading ? 'Working…' : 'Accept'}
-                    </button>
-                    <button
-                      type="button"
-                      className="danger-btn"
-                      onClick={handleRejectCashRequest}
-                      disabled={cashReviewActionLoading || cashReviewDetail.status !== 'PENDING'}
-                    >
-                      Reject
-                    </button>
-                    <button type="button" className="secondary-btn" onClick={closeLandlordCashReview} disabled={cashReviewActionLoading}>
-                      Close
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <p>Could not load request.</p>
-              )}
             </div>
           </div>
         ) : null}
