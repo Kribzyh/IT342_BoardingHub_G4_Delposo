@@ -8,6 +8,7 @@ import com.boardinghub.repository.UserRepository;
 import com.boardinghub.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -76,6 +77,14 @@ public class AuthController {
         if (token == null || token.isBlank()) {
             return ResponseEntity.badRequest().body("Missing Google token");
         }
+        // Only required for first-time Google users (when the email is not present in the DB yet).
+        String fullName = request.get("fullName");
+        String role = request.get("role");
+        boolean wasRoleProvided = role != null && !role.isBlank();
+        if (role == null || role.isBlank()) {
+            role = "TENANT";
+        }
+        role = role.toUpperCase();
 
         RestTemplate restTemplate = new RestTemplate();
         String url = "https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=" + token;
@@ -91,12 +100,27 @@ public class AuthController {
 
             User user = userRepository.findByEmail(email).orElse(null);
             if (user == null) {
+                if (fullName == null || fullName.isBlank()) {
+                    return ResponseEntity
+                            .status(HttpStatus.PRECONDITION_REQUIRED)
+                            .body(Map.of(
+                                    "code", "FULL_NAME_REQUIRED",
+                                    "email", email,
+                                    "suggestedFullName", name
+                            ));
+                }
                 user = new User();
                 user.setEmail(email);
-                user.setFullName(name);
+                user.setFullName(fullName);
                 user.setPassword("");
-                user.setRole(User.Role.TENANT);
+                try {
+                    user.setRole(User.Role.valueOf(role));
+                } catch (IllegalArgumentException e) {
+                    user.setRole(User.Role.TENANT);
+                }
                 user = userRepository.save(user);
+            } else {
+                // Role is set during first login and not updated for existing users
             }
 
             String jwt = jwtUtil.generateToken(user.getEmail());

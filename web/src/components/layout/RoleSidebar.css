@@ -1,0 +1,60 @@
+.role-sidebar {
+  width: 240px;
+  min-height: 100vh;
+  background: #14213d;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 14px;
+  box-sizing: border-box;
+}
+
+.role-sidebar-logo h2 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.role-sidebar-logo p {
+  margin: 6px 0 0;
+  color: #d7e3fc;
+  font-size: 0.9rem;
+}
+
+.role-sidebar-nav {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.role-sidebar-link {
+  background: transparent;
+  color: #ffffff;
+  border: none;
+  padding: 10px 12px;
+  text-align: left;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.role-sidebar-link:hover,
+.role-sidebar-link.active {
+  background: #1f3a6b;
+}
+
+.role-sidebar-logout {
+  margin-top: auto;
+  border: 1px solid #fca5a5;
+  color: #fecaca;
+  background: transparent;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.role-sidebar-logout:hover {
+  background: #7f1d1d;
+  color: #ffffff;
+}

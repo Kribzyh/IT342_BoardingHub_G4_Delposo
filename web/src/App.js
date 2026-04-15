@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
+import CompleteGoogleProfile from './components/auth/CompleteGoogleProfile';
 import Dashboard from './components/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
@@ -32,7 +33,31 @@ function App() {
             }
           />
           <Route
+            path="/complete-profile"
+            element={
+              <PublicRoute>
+                <CompleteGoogleProfile />
+              </PublicRoute>
+            }
+          />
+          <Route
             path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/properties/new"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/rooms/new"
             element={
               <ProtectedRoute>
                 <Dashboard />

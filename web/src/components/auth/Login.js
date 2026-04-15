@@ -35,6 +35,12 @@ const Login = () => {
           localStorage.setItem('token', data.accessToken);
           localStorage.setItem('user', JSON.stringify(data.user));
           navigate('/dashboard');
+        } else if (res.status === 428 && data.code === 'FULL_NAME_REQUIRED') {
+          // First-time Google login - redirect to profile completion
+          localStorage.setItem('googleToken', tokenResponse.access_token);
+          localStorage.setItem('googleEmail', data.email);
+          localStorage.setItem('suggestedFullName', data.suggestedFullName);
+          navigate('/complete-profile');
         } else {
           setError(data.message || 'Google login failed');
         }
