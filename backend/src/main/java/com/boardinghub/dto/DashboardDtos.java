@@ -42,6 +42,22 @@ public class DashboardDtos {
 
     @Data
     @AllArgsConstructor
+    public static class LandlordTenantDto {
+        private Long tenantId;
+        private String tenantName;
+        private String tenantEmail;
+        private Long propertyId;
+        private String propertyName;
+        private Long roomId;
+        private String roomNumber;
+        private BigDecimal monthlyRate;
+        private LocalDateTime enrolledAt;
+        /** Current billing month payment: PAID, PENDING, OVERDUE, UPCOMING (same rules as tenant rent tab). */
+        private String paymentStatus;
+    }
+
+    @Data
+    @AllArgsConstructor
     public static class RentDetailsDto {
         private Long propertyId;
         private String propertyName;
@@ -50,5 +66,17 @@ public class DashboardDtos {
         private String roomNumber;
         private BigDecimal monthlyRate;
         private LocalDateTime enrolledAt;
+    }
+
+    /** Amount due for the current billing period (extends with invoices later). */
+    @Data
+    @AllArgsConstructor
+    public static class TenantCurrentRentDto {
+        private BigDecimal amount;
+        private String status;
+        /** Next rent due date label, e.g. "January 25, 2025" (same day-of-month as enrollment). */
+        private String billingMonth;
+        /** Days until the next due date (enrollment day-of-month each month; 0 on due day). */
+        private Integer remainingDaysInBillingMonth;
     }
 }

@@ -40,7 +40,7 @@
 .dashboard-layout {
   display: flex;
   min-height: 100vh;
-  background: #f4f7fb;
+  background: #e2e8f0;
 }
 
 .dashboard-content {
@@ -55,10 +55,12 @@
 
 .dashboard-card {
   margin-top: 22px;
-  background: #ffffff;
+  background: #f8fafc;
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08);
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.14);
+  color: #0f172a;
 }
 
 .properties-grid {
@@ -68,19 +70,20 @@
 }
 
 .property-item {
-  border: 1px solid #dbe3f0;
+  border: 1px solid #94a3b8;
   border-radius: 10px;
   padding: 12px;
   position: relative;
   cursor: pointer;
+  background: #ffffff;
 }
 
 .property-thumb {
   width: 100%;
   min-height: 80px;
   border-radius: 8px;
-  background: #e7eefb;
-  color: #16325c;
+  background: #c7d2fe;
+  color: #1e293b;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -93,6 +96,7 @@
 .property-address,
 .property-meta {
   margin: 8px 0 0;
+  color: #1e293b;
 }
 
 .property-details-view h3 {
@@ -106,16 +110,17 @@
 }
 
 .property-column {
-  border: 1px solid #e5e7eb;
+  border: 1px solid #94a3b8;
   border-radius: 10px;
   min-height: 430px;
   padding: 12px;
   display: flex;
   flex-direction: column;
+  background: #ffffff;
 }
 
 .property-column-right {
-  background: #f8fafc;
+  background: #f1f5f9;
 }
 
 .property-rooms-list {
@@ -127,18 +132,21 @@
 }
 
 .room-list-item {
-  border: 1px solid #dbe3f0;
+  border: 1px solid #94a3b8;
   border-radius: 8px;
   background: #ffffff;
   display: flex;
   justify-content: space-between;
   padding: 10px;
   cursor: pointer;
+  color: #0f172a;
+  font-weight: 600;
 }
 
 .room-list-item.active {
-  border-color: #1d4ed8;
-  background: #eff6ff;
+  border-color: #1e40af;
+  background: #dbeafe;
+  color: #0b2f6b;
 }
 
 .room-item {
@@ -156,7 +164,7 @@
 }
 
 .room-item input {
-  border: 1px solid #dbe3f0;
+  border: 1px solid #64748b;
   border-radius: 8px;
   padding: 8px;
 }
@@ -185,23 +193,141 @@
 
 .tenant-thumb {
   width: 100%;
-  border: 1px solid #dbe3f0;
+  border: 1px solid #64748b;
   border-radius: 8px;
   background: #ffffff;
   padding: 10px;
   cursor: pointer;
   text-align: left;
+  color: #0f172a;
+  font-weight: 600;
 }
 
 .tenant-thumb.active {
-  border-color: #1d4ed8;
-  background: #eff6ff;
+  border-color: #1e40af;
+  background: #dbeafe;
+  color: #0b2f6b;
+}
+
+/* Payment pill sits inside the same bordered thumb as the name */
+.tenant-thumb-inner {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+}
+
+.tenant-thumb-inner .tenant-thumb-name {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  font-weight: 600;
+}
+
+.tenant-thumb-inner .tenant-list-payment {
+  margin-top: 0;
+  flex-shrink: 0;
 }
 
 .tenant-detail-card {
-  border: 1px solid #e5e7eb;
+  border: 1px solid #94a3b8;
   border-radius: 8px;
   padding: 10px;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.tenant-tab-layout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 14px;
+}
+
+.tenant-list-column {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tenant-list-item {
+  border: 1px solid #dbe3f0;
+  border-radius: 8px;
+  background: #ffffff;
+  text-align: left;
+  padding: 10px;
+  cursor: pointer;
+  color: #0f172a;
+}
+
+.tenant-list-item.active {
+  border-color: #1d4ed8;
+  background: #dbeafe;
+  color: #0b2f6b;
+}
+
+.tenant-list-name {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.tenant-list-meta {
+  margin-top: 4px;
+  color: #1e293b;
+}
+
+.tenant-list-payment {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.tenant-list-payment--paid {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.tenant-list-payment--pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.tenant-list-payment--overdue {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.tenant-list-payment--upcoming {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.tenant-list-payment--unknown {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.tenant-detail-column {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  min-height: 520px;
+  padding: 12px;
+}
+
+.tenant-rent-loading {
+  padding: 24px 14px;
+  color: #64748b;
+  font-size: 0.95rem;
 }
 
 .tenant-rent-view {
@@ -211,14 +337,14 @@
 }
 
 .tenant-rent-column {
-  border: 1px solid #e5e7eb;
+  border: 1px solid #94a3b8;
   border-radius: 10px;
   min-height: 320px;
   padding: 14px;
 }
 
 .tenant-rent-column-blank {
-  background: #000000;
+  background: #0f172a;
 }
 
 .tenant-enroll-form {
@@ -241,7 +367,7 @@
 }
 
 .tenant-enroll-form input {
-  border: 1px solid #dbe3f0;
+  border: 1px solid #64748b;
   border-radius: 8px;
   padding: 10px;
 }
@@ -287,6 +413,7 @@
   background: #ffffff;
   padding: 10px 12px;
   cursor: pointer;
+  color: #0f172a;
   box-shadow: 0 3px 10px rgba(2, 6, 23, 0.15);
 }
 
@@ -307,13 +434,13 @@
 }
 
 .property-form input {
-  border: 1px solid #dbe3f0;
+  border: 1px solid #64748b;
   border-radius: 8px;
   padding: 10px;
 }
 
 .property-form select {
-  border: 1px solid #dbe3f0;
+  border: 1px solid #64748b;
   border-radius: 8px;
   padding: 10px;
   background: #ffffff;
@@ -335,7 +462,7 @@
 }
 
 .primary-btn {
-  background: #1d4ed8;
+  background: #1e40af;
   color: #ffffff;
 }
 
@@ -345,7 +472,8 @@
 }
 
 .secondary-btn {
-  background: #e5e7eb;
+  background: #cbd5e1;
+  color: #0f172a;
 }
 
 .danger-btn {
@@ -353,7 +481,7 @@
   border-radius: 8px;
   padding: 10px 12px;
   cursor: pointer;
-  background: #dc2626;
+  background: #b91c1c;
   color: #ffffff;
 }
 
@@ -373,6 +501,8 @@
   border-radius: 12px;
   padding: 18px;
   box-shadow: 0 20px 40px rgba(2, 6, 23, 0.22);
+  border: 1px solid #94a3b8;
+  color: #0f172a;
 }
 
 .confirm-modal h3 {
@@ -388,4 +518,199 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.payment-error {
+  color: #b91c1c;
+  font-size: 0.95rem;
+  margin: 8px 0 0;
+}
+
+.payment-sync-notice {
+  background: #ecfdf5;
+  border: 1px solid #6ee7b7;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 0 0 14px;
+  color: #065f46;
+  font-size: 0.95rem;
+}
+
+.cash-payment-notice {
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 8px 0 16px;
+  color: #92400e;
+  font-size: 0.95rem;
+}
+
+.cash-pending-notice {
+  background: #eff6ff;
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 0 0 12px;
+  color: #1e3a5f;
+  font-size: 0.9rem;
+}
+
+.records-nested {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.records-subtabs {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 8px;
+}
+
+.records-subtab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  min-height: 30px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.records-subtab:hover {
+  background: #f1f5f9;
+}
+
+.records-subtab.active {
+  background: #0f172a;
+  color: #f8fafc;
+  border-color: #0f172a;
+}
+
+.linkish-btn {
+  background: none;
+  border: none;
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
+}
+
+.cash-form-modal .cash-form-lead {
+  margin: 0 0 12px;
+  font-size: 0.92rem;
+  color: #475569;
+}
+
+.cash-payment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cash-payment-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-family: inherit;
+}
+
+.cash-review-modal {
+  max-width: 520px;
+}
+
+.cash-review-body {
+  margin-bottom: 14px;
+}
+
+.cash-review-body p {
+  margin: 8px 0;
+}
+
+.cash-review-email {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.cash-review-muted {
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+.cash-review-photo {
+  max-width: 100%;
+  max-height: 280px;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  margin-top: 8px;
+}
+
+.cash-review-actions {
+  flex-wrap: wrap;
+}
+
+.payment-choice-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.payment-choice-actions .primary-btn,
+.payment-choice-actions .secondary-btn {
+  width: 100%;
+}
+
+.payment-records-section {
+  overflow-x: auto;
+}
+
+.payment-records-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.payment-records-table th,
+.payment-records-table td {
+  border: 1px solid #e2e8f0;
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.payment-records-table th {
+  background: #f1f5f9;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.payment-records-table tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.payment-ref-cell code {
+  font-size: 0.75rem;
+  word-break: break-all;
+}
+
+.room-code-expiry {
+  font-size: 0.9rem;
+  color: #64748b;
 }

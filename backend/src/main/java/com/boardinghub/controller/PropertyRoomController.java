@@ -24,6 +24,22 @@ public class PropertyRoomController {
         return ResponseEntity.ok(propertyRoomService.getLandlordProperties(authentication.getName()));
     }
 
+    @GetMapping("/landlord/tenants")
+    public ResponseEntity<List<DashboardDtos.LandlordTenantDto>> getLandlordTenants(
+            Authentication authentication,
+            @RequestParam(required = false) Long propertyId
+    ) {
+        return ResponseEntity.ok(propertyRoomService.getLandlordTenants(authentication.getName(), propertyId));
+    }
+
+    @GetMapping("/landlord/tenant/{tenantId}/current-rent")
+    public ResponseEntity<DashboardDtos.TenantCurrentRentDto> getTenantCurrentRentForLandlord(
+            Authentication authentication,
+            @PathVariable Long tenantId
+    ) {
+        return ResponseEntity.ok(propertyRoomService.getTenantCurrentRentSummaryForLandlord(authentication.getName(), tenantId));
+    }
+
     @PostMapping("/properties")
     public ResponseEntity<DashboardDtos.PropertyDto> createProperty(
             Authentication authentication,
@@ -86,5 +102,10 @@ public class PropertyRoomController {
     @GetMapping("/tenant/rent")
     public ResponseEntity<DashboardDtos.RentDetailsDto> getTenantRent(Authentication authentication) {
         return ResponseEntity.ok(propertyRoomService.getTenantRentDetails(authentication.getName()));
+    }
+
+    @GetMapping("/tenant/current-rent")
+    public ResponseEntity<DashboardDtos.TenantCurrentRentDto> getTenantCurrentRent(Authentication authentication) {
+        return ResponseEntity.ok(propertyRoomService.getTenantCurrentRentSummary(authentication.getName()));
     }
 }

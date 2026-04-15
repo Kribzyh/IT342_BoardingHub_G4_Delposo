@@ -13,6 +13,7 @@ import com.boardinghub.event.TenantEnrolledEvent;
 import com.boardinghub.factory.PropertyFactory;
 import com.boardinghub.factory.RoomFactory;
 import com.boardinghub.repository.PropertyRepository;
+import com.boardinghub.repository.RentPaymentRepository;
 import com.boardinghub.repository.RoomRepository;
 import com.boardinghub.repository.UserRepository;
 import com.boardinghub.strategy.CodeGenerationStrategy;
@@ -23,8 +24,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 @Service
@@ -33,6 +38,7 @@ public class PropertyRoomService {
     private final PropertyRepository propertyRepository;
     private final RoomRepository roomRepository;
     private final UserRepository userRepository;
+    private final RentPaymentRepository rentPaymentRepository;
     private final PropertyFactory propertyFactory;
     private final RoomFactory roomFactory;
     private final CodeGenerationStrategy codeGenerationStrategy;
@@ -46,6 +52,90 @@ public class PropertyRoomService {
                 .stream()
                 .map(this::toPropertyDto)
                 .toList();
+    }
+
+    public List<DashboardDtos.LandlordTenantDto> getLandlordTenants(String email, Long propertyId) {
+        User landlord = getUserByEmail(email);
+        requireRole(landlord, User.Role.LANDLORD);
+
+        List<Property> properties = propertyRepository.findByLandlordOrderByCreatedAtDesc(landlord);
+        if (propertyId != null) {
+            properties = properties.stream()
+                    .filter(property -> property.getId().equals(propertyId))
+                    .toList();
+        }
+
+        return properties.stream()
+                .flatMap(property -> roomRepository.findByPropertyOrderByCreatedAtAsc(property).stream()
+                        .filter(room -> room.getTenant() != null)
+                        .map(room -> new DashboardDtos.LandlordTenantDto(
+                                room.getTenant().getId(),
+                                room.getTenant().getFullName(),
+                                room.getTenant().getEmail(),
+                                property.getId(),
+                                property.getName(),
+                                room.getId(),
+                                room.getRoomNumber(),
+                                room.getMonthlyRate(),
+                                room.getEnrolledAt(),
+                                computeCurrentBillingPaymentStatus(
+                                        room.getTenant(),
+                                        room.getEnrolledAt() != null
+                                                ? room.getEnrolledAt().toLocalDate()
+                                                : LocalDate.now()
+                                )
+                        )))
+                .toList();
+    }
+
+    /**
+     * Rent is due each month on the same day-of-month as {@code enrolledDate} (enrollment anniversary).
+     * A payment counts for the period {@code [periodStart, periodStart + 1 month)}.
+     */
+    private String computeCurrentBillingPaymentStatus(User tenant, LocalDate enrolledDate) {
+        LocalDate today = LocalDate.now();
+        LocalDate periodStart = currentBillingPeriodStart(enrolledDate, today);
+        LocalDateTime windowStart = periodStart.atStartOfDay();
+        LocalDateTime windowEnd = periodStart.plusMonths(1).atStartOfDay();
+        boolean paidThisPeriod = rentPaymentRepository.existsByTenantAndRecordedAtGreaterThanEqualAndRecordedAtLessThan(
+                tenant, windowStart, windowEnd);
+        if (paidThisPeriod) {
+            return "PAID";
+        }
+        LocalDate dueDate = periodStart.plusMonths(1);
+        if (today.isAfter(dueDate)) {
+            return "OVERDUE";
+        }
+        return "PENDING";
+    }
+
+    /**
+     * Start (inclusive) of the billing period containing {@code today}, using monthly cycles from {@code enrolledDate}.
+     */
+    private static LocalDate currentBillingPeriodStart(LocalDate enrolledDate, LocalDate today) {
+        LocalDate periodStart = enrolledDate;
+        while (!today.isBefore(periodStart.plusMonths(1))) {
+            periodStart = periodStart.plusMonths(1);
+        }
+        return periodStart;
+    }
+
+    /**
+     * Same payload as {@link #getTenantCurrentRentSummary(String)} for the tenant rent tab,
+     * but callable by the landlord for a tenant on their property.
+     */
+    @Transactional(readOnly = true)
+    public DashboardDtos.TenantCurrentRentDto getTenantCurrentRentSummaryForLandlord(String landlordEmail, Long tenantId) {
+        User landlord = getUserByEmail(landlordEmail);
+        requireRole(landlord, User.Role.LANDLORD);
+        User tenant = userRepository.findById(tenantId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tenant not found"));
+        Room room = roomRepository.findByTenant(tenant)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tenant is not enrolled in a room"));
+        if (!room.getProperty().getLandlord().getId().equals(landlord.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This tenant is not on your property");
+        }
+        return getTenantCurrentRentSummary(tenant.getEmail());
     }
 
     @Transactional
@@ -154,6 +244,32 @@ public class PropertyRoomService {
         Room room = roomRepository.findByTenant(tenant)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tenant not enrolled"));
         return toRentDetails(room);
+    }
+
+    public DashboardDtos.TenantCurrentRentDto getTenantCurrentRentSummary(String email) {
+        DashboardDtos.RentDetailsDto rent = getTenantRentDetails(email);
+        User tenant = getUserByEmail(email);
+        LocalDate enrolledDate = rent.getEnrolledAt() != null
+                ? rent.getEnrolledAt().toLocalDate()
+                : LocalDate.now();
+
+        LocalDate today = LocalDate.now();
+        LocalDate periodStart = currentBillingPeriodStart(enrolledDate, today);
+        LocalDate dueDate = periodStart.plusMonths(1);
+        DateTimeFormatter dueFmt = DateTimeFormatter.ofPattern("MMMM d, yyyy", Locale.ENGLISH);
+        String billingMonth = dueDate.format(dueFmt);
+
+        String status = computeCurrentBillingPaymentStatus(tenant, enrolledDate);
+
+        long daysBetween = ChronoUnit.DAYS.between(today, dueDate);
+        int remainingDays = (int) Math.max(0L, daysBetween);
+
+        return new DashboardDtos.TenantCurrentRentDto(
+                rent.getMonthlyRate(),
+                status,
+                billingMonth,
+                remainingDays
+        );
     }
 
     private Property getOwnedProperty(String email, Long propertyId) {

@@ -1,4 +1,8 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
   security:
     oauth2:
       client:
@@ -40,8 +44,13 @@ jwt:
   expiration: 3600000
 
 app:
+  upload-dir: ${APP_UPLOAD_DIR:uploads}
   cors:
     allowed-origins: http://localhost:3000,http://localhost:3001
   oauth2:
     redirect-uri: http://localhost:3000/oauth2/redirect
 
+paymongo:
+  secret-key: ${PAYMONGO_SECRET_KEY:}
+  statement-descriptor: ${PAYMONGO_STATEMENT_DESCRIPTOR:BoardingHub}
+  default-return-url: ${APP_PAYMENT_RETURN_URL:http://localhost:3000/dashboard?payment=complete}
