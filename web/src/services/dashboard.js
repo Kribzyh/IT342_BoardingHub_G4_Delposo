@@ -54,23 +54,3 @@ export const getLandlordTenants = async (propertyId) => {
   });
   return response.data;
 };
-
-export const getTenantCurrentRent = async () => {
-  const response = await api.get('/dashboard/tenant/current-rent');
-  return response.data;
-};
-
-export const createPaymongoCheckout = async (invoiceId) => {
-  const response = await api.post('/payments/paymongo/checkout', { invoiceId });
-  return response.data;
-};
-
-export const getTenantPaymentRecords = async () => {
-  const response = await api.get('/payments/tenant/records');
-  return response.data;
-};
-
-export const getLandlordPaymentRecords = async () => {
-  const response = await api.get('/payments/landlord/records');
-  return response.data;
-};

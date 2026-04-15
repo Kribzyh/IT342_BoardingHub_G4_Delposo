@@ -95,9 +95,4 @@ public class PropertyRoomController {
     public ResponseEntity<DashboardDtos.RentDetailsDto> getTenantRent(Authentication authentication) {
         return ResponseEntity.ok(propertyRoomService.getTenantRentDetails(authentication.getName()));
     }
-
-    @GetMapping("/tenant/current-rent")
-    public ResponseEntity<DashboardDtos.TenantCurrentRentDto> getTenantCurrentRent(Authentication authentication) {
-        return ResponseEntity.ok(propertyRoomService.getTenantCurrentRentSummary(authentication.getName()));
-    }
 }

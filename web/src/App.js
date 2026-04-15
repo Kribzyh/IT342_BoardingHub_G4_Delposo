@@ -41,7 +41,23 @@ function App() {
             }
           />
           <Route
-            path="/dashboard/*"
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/properties/new"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/rooms/new"
             element={
               <ProtectedRoute>
                 <Dashboard />

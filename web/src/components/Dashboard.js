@@ -10,7 +10,6 @@ import {
   generateRoomCode,
   getLandlordProperties,
   getLandlordTenants,
-  getTenantCurrentRent,
   getTenantRent,
   updateProperty,
   updateRoom
@@ -60,55 +59,9 @@ const Dashboard = () => {
   );
 
   const refreshLandlord = async () => setProperties(await getLandlordProperties());
-
-  const currentBillingMonthLabel = (d = new Date()) =>
-    d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-
-  /** Calendar days from today through the last day of the month (matches backend ChronoUnit.DAYS). */
-  const daysUntilEndOfBillingMonth = (d = new Date()) => {
-    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-    return Math.max(0, lastDay - d.getDate());
-  };
-
-  const formatRentStatus = (s) => {
-    if (!s) return '-';
-    const labels = { PENDING: 'Pending', OVERDUE: 'Overdue', UPCOMING: 'Upcoming', DUE: 'Due' };
-    return labels[s] || s;
-  };
-
-  /** Merges GET /dashboard/tenant/current-rent with rent details; falls back to monthlyRate if the call fails. */
-  const fetchOptionalInvoiceFields = async (rent) => {
-    const fallback = {
-      currentInvoiceAmount: rent?.monthlyRate ?? null,
-      currentInvoiceStatus: 'PENDING',
-      currentBillingMonth: currentBillingMonthLabel(),
-      currentRemainingDaysInBillingMonth: daysUntilEndOfBillingMonth()
-    };
-    try {
-      const currentInvoice = await getTenantCurrentRent();
-      const amount =
-        currentInvoice.amount != null && currentInvoice.amount !== ''
-          ? currentInvoice.amount
-          : rent?.monthlyRate;
-      const remaining =
-        currentInvoice.remainingDaysInBillingMonth != null
-          ? currentInvoice.remainingDaysInBillingMonth
-          : daysUntilEndOfBillingMonth();
-      return {
-        currentInvoiceAmount: amount != null ? amount : fallback.currentInvoiceAmount,
-        currentInvoiceStatus: currentInvoice.status || fallback.currentInvoiceStatus,
-        currentBillingMonth: currentInvoice.billingMonth || fallback.currentBillingMonth,
-        currentRemainingDaysInBillingMonth: remaining
-      };
-    } catch {
-      return fallback;
-    }
-  };
-
   const refreshTenant = async () => {
     try {
-      const rent = await getTenantRent();
-      setTenantRent({ ...rent, ...(await fetchOptionalInvoiceFields(rent)) });
+      setTenantRent(await getTenantRent());
     } catch {
       setTenantRent(null);
     }
@@ -202,11 +155,11 @@ const Dashboard = () => {
   const handleEnroll = async (e) => {
     e.preventDefault();
     try {
-      const rent = await enrollTenant(enrollCode);
+      await enrollTenant(enrollCode);
       setEnrollMessage('Enrolled successfully.');
       setShowEnrollForm(false);
       setEnrollCode('');
-      setTenantRent({ ...rent, ...(await fetchOptionalInvoiceFields(rent)) });
+      await refreshTenant();
     } catch (error) {
       setEnrollMessage(error.response?.data?.message || 'Invalid or expired code.');
     }
@@ -369,24 +322,7 @@ const Dashboard = () => {
               </div>
             ) : isTenantRent ? (
               tenantRent ? (
-                <div className="tenant-rent-view">
-                  <div className="tenant-rent-column">
-                    <h3>Boarding House Details</h3>
-                    <p><strong>Property:</strong> {tenantRent.propertyName}</p>
-                    <p><strong>Address:</strong> {tenantRent.propertyAddress}</p>
-                    <p><strong>Room:</strong> {tenantRent.roomNumber}</p>
-                    <p><strong>Monthly Rate:</strong> {tenantRent.monthlyRate}</p>
-                    <p><strong>Enrolled Date:</strong> {tenantRent.enrolledAt ? new Date(tenantRent.enrolledAt).toLocaleString() : '-'}</p>
-                  </div>
-                  <div className="tenant-rent-column">
-                    <h3>This Month&apos;s Payment</h3>
-                    <p><strong>Billing Month:</strong> {tenantRent.currentBillingMonth || '-'}</p>
-                    <p><strong>Status:</strong> {formatRentStatus(tenantRent.currentInvoiceStatus)}</p>
-                    <p><strong>Days left in billing month:</strong> {tenantRent.currentRemainingDaysInBillingMonth ?? '-'}</p>
-                    <p><strong>Amount:</strong> {tenantRent.currentInvoiceAmount ?? '-'}</p>
-                    <button type="button" className="primary-btn">Pay Now</button>
-                  </div>
-                </div>
+                <div className="tenant-rent-view"><div className="tenant-rent-column"><h3>Boarding House Details</h3><p><strong>Property:</strong> {tenantRent.propertyName}</p><p><strong>Address:</strong> {tenantRent.propertyAddress}</p><p><strong>Room:</strong> {tenantRent.roomNumber}</p><p><strong>Monthly Rate:</strong> {tenantRent.monthlyRate}</p><p><strong>Enrolled Date:</strong> {tenantRent.enrolledAt ? new Date(tenantRent.enrolledAt).toLocaleString() : '-'}</p></div><div className="tenant-rent-column tenant-rent-column-blank" /></div>
               ) : (
                 <div className="tenant-enroll-form">
                   {!showEnrollForm ? <button type="button" className="primary-btn" onClick={() => setShowEnrollForm(true)}>Enroll</button> : <form onSubmit={handleEnroll}><h3>Enroll to a Room</h3><label htmlFor="enrollCode">Enter 9-digit code<input id="enrollCode" value={enrollCode} onChange={(e) => setEnrollCode(e.target.value)} maxLength={9} placeholder="#########" required /></label><div className="form-actions"><button type="button" className="secondary-btn" onClick={() => setShowEnrollForm(false)}>Cancel</button><button type="submit" className="primary-btn">Submit Code</button></div></form>}

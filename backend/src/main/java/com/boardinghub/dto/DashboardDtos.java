@@ -65,15 +65,4 @@ public class DashboardDtos {
         private BigDecimal monthlyRate;
         private LocalDateTime enrolledAt;
     }
-
-    /** Amount due for the current billing period (extends with invoices later). */
-    @Data
-    @AllArgsConstructor
-    public static class TenantCurrentRentDto {
-        private BigDecimal amount;
-        private String status;
-        private String billingMonth;
-        /** Calendar days from today until the last day of the billing month (0 on the last day). */
-        private Integer remainingDaysInBillingMonth;
-    }
 }
