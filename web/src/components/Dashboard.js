@@ -10,7 +10,6 @@ import {
   generateRoomCode,
   getLandlordProperties,
   getLandlordTenants,
-  getLandlordTenantCurrentRent,
   getTenantCurrentRent,
   getTenantRent,
   createPaymongoCheckout,
@@ -179,23 +178,7 @@ const Dashboard = () => {
     }
   };
   const refreshLandlordTenants = async (propertyId) => {
-    const list = await getLandlordTenants(propertyId);
-    const enriched = await Promise.all(
-      list.map(async (t) => {
-        try {
-          const current = await getLandlordTenantCurrentRent(t.tenantId);
-          return {
-            ...t,
-            paymentStatus: current.status,
-            billingMonth: current.billingMonth,
-            remainingDaysInBillingMonth: current.remainingDaysInBillingMonth
-          };
-        } catch {
-          return { ...t, paymentStatus: t.paymentStatus ?? null };
-        }
-      })
-    );
-    setLandlordTenants(enriched);
+    setLandlordTenants(await getLandlordTenants(propertyId));
   };
 
   useEffect(() => {
@@ -646,11 +629,6 @@ const Dashboard = () => {
                             <div className="tenant-list-name">{tenant.tenantName}</div>
                             <div className="tenant-list-meta">{tenant.propertyName}</div>
                             <div className="tenant-list-meta">Room {tenant.roomNumber}</div>
-                            <div
-                              className={`tenant-list-payment tenant-list-payment--${(tenant.paymentStatus || 'unknown').toLowerCase()}`}
-                            >
-                              {formatRentStatus(tenant.paymentStatus)}
-                            </div>
                           </button>
                         );
                       })}
@@ -663,7 +641,6 @@ const Dashboard = () => {
                           <p><strong>Property:</strong> {selectedTenant.propertyName}</p>
                           <p><strong>Room:</strong> {selectedTenant.roomNumber}</p>
                           <p><strong>Monthly Rate:</strong> {selectedTenant.monthlyRate}</p>
-                          <p><strong>Payment status:</strong> {formatRentStatus(selectedTenant.paymentStatus)}</p>
                           <p>
                             <strong>Enrolled Date:</strong>{' '}
                             {selectedTenant.enrolledAt

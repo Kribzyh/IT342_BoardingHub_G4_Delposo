@@ -52,8 +52,6 @@ public class DashboardDtos {
         private String roomNumber;
         private BigDecimal monthlyRate;
         private LocalDateTime enrolledAt;
-        /** Current billing month payment: PAID, PENDING, OVERDUE, UPCOMING (same rules as tenant rent tab). */
-        private String paymentStatus;
     }
 
     @Data

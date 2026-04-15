@@ -260,41 +260,6 @@
   color: #1e293b;
 }
 
-.tenant-list-payment {
-  display: inline-block;
-  margin-top: 8px;
-  padding: 3px 8px;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.tenant-list-payment--paid {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.tenant-list-payment--pending {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.tenant-list-payment--overdue {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.tenant-list-payment--upcoming {
-  background: #e0e7ff;
-  color: #3730a3;
-}
-
-.tenant-list-payment--unknown {
-  background: #f1f5f9;
-  color: #475569;
-}
-
 .tenant-detail-column {
   border: 1px solid #e5e7eb;
   border-radius: 10px;

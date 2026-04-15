@@ -55,12 +55,6 @@ export const getLandlordTenants = async (propertyId) => {
   return response.data;
 };
 
-/** Same shape as tenant GET /dashboard/tenant/current-rent; landlord must own the property. */
-export const getLandlordTenantCurrentRent = async (tenantId) => {
-  const response = await api.get(`/dashboard/landlord/tenant/${tenantId}/current-rent`);
-  return response.data;
-};
-
 export const getTenantCurrentRent = async () => {
   const response = await api.get('/dashboard/tenant/current-rent');
   return response.data;
