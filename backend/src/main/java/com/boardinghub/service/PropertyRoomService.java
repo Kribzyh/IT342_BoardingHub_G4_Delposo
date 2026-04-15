@@ -48,34 +48,6 @@ public class PropertyRoomService {
                 .toList();
     }
 
-    public List<DashboardDtos.LandlordTenantDto> getLandlordTenants(String email, Long propertyId) {
-        User landlord = getUserByEmail(email);
-        requireRole(landlord, User.Role.LANDLORD);
-
-        List<Property> properties = propertyRepository.findByLandlordOrderByCreatedAtDesc(landlord);
-        if (propertyId != null) {
-            properties = properties.stream()
-                    .filter(property -> property.getId().equals(propertyId))
-                    .toList();
-        }
-
-        return properties.stream()
-                .flatMap(property -> roomRepository.findByPropertyOrderByCreatedAtAsc(property).stream()
-                        .filter(room -> room.getTenant() != null)
-                        .map(room -> new DashboardDtos.LandlordTenantDto(
-                                room.getTenant().getId(),
-                                room.getTenant().getFullName(),
-                                room.getTenant().getEmail(),
-                                property.getId(),
-                                property.getName(),
-                                room.getId(),
-                                room.getRoomNumber(),
-                                room.getMonthlyRate(),
-                                room.getEnrolledAt()
-                        )))
-                .toList();
-    }
-
     @Transactional
     public DashboardDtos.PropertyDto createProperty(String email, CreatePropertyRequest request) {
         User landlord = getUserByEmail(email);
