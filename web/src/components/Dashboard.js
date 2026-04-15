@@ -1171,7 +1171,7 @@ const Dashboard = () => {
                         A cash payment request is waiting for your landlord to review. You cannot send another until they accept or reject it.
                       </p>
                     ) : null}
-                    <p><strong>Next due:</strong> {tenantRent.currentBillingMonth || '-'}</p>
+                    <p><strong>Billing Month:</strong> {tenantRent.currentBillingMonth || '-'}</p>
                     <p><strong>Status:</strong> {formatRentStatus(tenantRent.currentInvoiceStatus)}</p>
                     <p><strong>Days left in billing month:</strong> {tenantRent.currentRemainingDaysInBillingMonth ?? '-'}</p>
                     <p><strong>Amount:</strong> {tenantRent.currentInvoiceAmount ?? '-'}</p>

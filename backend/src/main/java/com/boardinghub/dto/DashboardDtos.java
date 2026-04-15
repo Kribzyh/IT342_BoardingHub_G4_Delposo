@@ -74,9 +74,8 @@ public class DashboardDtos {
     public static class TenantCurrentRentDto {
         private BigDecimal amount;
         private String status;
-        /** Next rent due date label, e.g. "January 25, 2025" (same day-of-month as enrollment). */
         private String billingMonth;
-        /** Days until the next due date (enrollment day-of-month each month; 0 on due day). */
+        /** Calendar days from today until the last day of the billing month (0 on the last day). */
         private Integer remainingDaysInBillingMonth;
     }
 }

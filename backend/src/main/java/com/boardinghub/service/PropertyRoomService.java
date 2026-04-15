@@ -26,6 +26,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -78,46 +79,31 @@ public class PropertyRoomService {
                                 room.getRoomNumber(),
                                 room.getMonthlyRate(),
                                 room.getEnrolledAt(),
-                                computeCurrentBillingPaymentStatus(
-                                        room.getTenant(),
-                                        room.getEnrolledAt() != null
-                                                ? room.getEnrolledAt().toLocalDate()
-                                                : LocalDate.now()
-                                )
+                                computeCurrentBillingPaymentStatus(room.getTenant())
                         )))
                 .toList();
     }
 
     /**
-     * Rent is due each month on the same day-of-month as {@code enrolledDate} (enrollment anniversary).
-     * A payment counts for the period {@code [periodStart, periodStart + 1 month)}.
+     * Same rules as {@link #getTenantCurrentRentSummary(String)}: paid this month vs calendar billing state.
      */
-    private String computeCurrentBillingPaymentStatus(User tenant, LocalDate enrolledDate) {
-        LocalDate today = LocalDate.now();
-        LocalDate periodStart = currentBillingPeriodStart(enrolledDate, today);
-        LocalDateTime windowStart = periodStart.atStartOfDay();
-        LocalDateTime windowEnd = periodStart.plusMonths(1).atStartOfDay();
-        boolean paidThisPeriod = rentPaymentRepository.existsByTenantAndRecordedAtGreaterThanEqualAndRecordedAtLessThan(
-                tenant, windowStart, windowEnd);
-        if (paidThisPeriod) {
+    private String computeCurrentBillingPaymentStatus(User tenant) {
+        YearMonth billingYm = YearMonth.now();
+        YearMonth nowYm = YearMonth.now();
+        LocalDateTime monthStart = billingYm.atDay(1).atStartOfDay();
+        LocalDateTime nextMonthStart = billingYm.plusMonths(1).atDay(1).atStartOfDay();
+        boolean paidThisBillingMonth = rentPaymentRepository.existsByTenantAndRecordedAtGreaterThanEqualAndRecordedAtLessThan(
+                tenant, monthStart, nextMonthStart);
+        if (paidThisBillingMonth) {
             return "PAID";
         }
-        LocalDate dueDate = periodStart.plusMonths(1);
-        if (today.isAfter(dueDate)) {
+        if (billingYm.equals(nowYm)) {
+            return "PENDING";
+        }
+        if (billingYm.isBefore(nowYm)) {
             return "OVERDUE";
         }
-        return "PENDING";
-    }
-
-    /**
-     * Start (inclusive) of the billing period containing {@code today}, using monthly cycles from {@code enrolledDate}.
-     */
-    private static LocalDate currentBillingPeriodStart(LocalDate enrolledDate, LocalDate today) {
-        LocalDate periodStart = enrolledDate;
-        while (!today.isBefore(periodStart.plusMonths(1))) {
-            periodStart = periodStart.plusMonths(1);
-        }
-        return periodStart;
+        return "UPCOMING";
     }
 
     /**
@@ -249,19 +235,15 @@ public class PropertyRoomService {
     public DashboardDtos.TenantCurrentRentDto getTenantCurrentRentSummary(String email) {
         DashboardDtos.RentDetailsDto rent = getTenantRentDetails(email);
         User tenant = getUserByEmail(email);
-        LocalDate enrolledDate = rent.getEnrolledAt() != null
-                ? rent.getEnrolledAt().toLocalDate()
-                : LocalDate.now();
+        // Later: derive from open invoice; for now billing period is the current calendar month.
+        YearMonth billingYm = YearMonth.now();
+        String billingMonth = billingYm.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.ENGLISH));
+
+        String status = computeCurrentBillingPaymentStatus(tenant);
 
         LocalDate today = LocalDate.now();
-        LocalDate periodStart = currentBillingPeriodStart(enrolledDate, today);
-        LocalDate dueDate = periodStart.plusMonths(1);
-        DateTimeFormatter dueFmt = DateTimeFormatter.ofPattern("MMMM d, yyyy", Locale.ENGLISH);
-        String billingMonth = dueDate.format(dueFmt);
-
-        String status = computeCurrentBillingPaymentStatus(tenant, enrolledDate);
-
-        long daysBetween = ChronoUnit.DAYS.between(today, dueDate);
+        LocalDate endOfBillingMonth = billingYm.atEndOfMonth();
+        long daysBetween = ChronoUnit.DAYS.between(today, endOfBillingMonth);
         int remainingDays = (int) Math.max(0L, daysBetween);
 
         return new DashboardDtos.TenantCurrentRentDto(
