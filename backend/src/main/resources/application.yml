@@ -45,7 +45,3 @@ app:
   oauth2:
     redirect-uri: http://localhost:3000/oauth2/redirect
 
-paymongo:
-  secret-key: ${PAYMONGO_SECRET_KEY:}
-  statement-descriptor: ${PAYMONGO_STATEMENT_DESCRIPTOR:BoardingHub}
-  default-return-url: ${APP_PAYMENT_RETURN_URL:http://localhost:3000/dashboard?payment=complete}

@@ -12,10 +12,6 @@ import {
   getLandlordTenants,
   getTenantCurrentRent,
   getTenantRent,
-  createPaymongoCheckout,
-  completePaymongoPayment,
-  getTenantPaymentRecords,
-  getLandlordPaymentRecords,
   updateProperty,
   updateRoom
 } from '../services/dashboard';
@@ -52,12 +48,6 @@ const Dashboard = () => {
   const [tenantFilterPropertyId, setTenantFilterPropertyId] = useState('');
   const [landlordTenants, setLandlordTenants] = useState([]);
   const [selectedTenantKey, setSelectedTenantKey] = useState('');
-  const [paymentLoading, setPaymentLoading] = useState(false);
-  const [paymentError, setPaymentError] = useState('');
-  const [paymentRecords, setPaymentRecords] = useState([]);
-  const [paymentSyncMessage, setPaymentSyncMessage] = useState('');
-  const [paymentChoiceOpen, setPaymentChoiceOpen] = useState(false);
-  const [cashPaymentNotice, setCashPaymentNotice] = useState('');
 
   const selectedProperty = properties.find((p) => p.id === selectedPropertyId);
   const propertyRooms = selectedProperty?.rooms || [];
@@ -82,17 +72,9 @@ const Dashboard = () => {
 
   const formatRentStatus = (s) => {
     if (!s) return '-';
-    const labels = {
-      PENDING: 'Pending',
-      PAID: 'Paid',
-      OVERDUE: 'Overdue',
-      UPCOMING: 'Upcoming',
-      DUE: 'Due'
-    };
+    const labels = { PENDING: 'Pending', OVERDUE: 'Overdue', UPCOMING: 'Upcoming', DUE: 'Due' };
     return labels[s] || s;
   };
-
-  const rentPaidForCurrentMonth = tenantRent?.currentInvoiceStatus === 'PAID';
 
   /** Merges GET /dashboard/tenant/current-rent with rent details; falls back to monthlyRate if the call fails. */
   const fetchOptionalInvoiceFields = async (rent) => {
@@ -140,10 +122,8 @@ const Dashboard = () => {
   }, [location.pathname]);
   useEffect(() => {
     if (normalizedRole === 'landlord') refreshLandlord();
+    if (normalizedRole === 'tenant') refreshTenant();
   }, [normalizedRole]);
-  useEffect(() => {
-    if (normalizedRole === 'tenant' && activeItem === 'rent') refreshTenant();
-  }, [activeItem, normalizedRole]);
   useEffect(() => {
     if (normalizedRole === 'landlord' && activeItem === 'tenants') {
       refreshLandlordTenants(tenantFilterPropertyId ? Number(tenantFilterPropertyId) : undefined);
@@ -170,54 +150,6 @@ const Dashboard = () => {
     if (!selectedRoomId && propertyRooms.length) setSelectedRoomId(propertyRooms[0].id);
   }, [propertyRooms, selectedRoomId]);
 
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    if (params.get('payment') !== 'complete') return;
-    const pi = params.get('payment_intent_id');
-    if (!pi) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await completePaymongoPayment(pi);
-        if (!cancelled) {
-          setPaymentSyncMessage(res.message || 'Payment saved to your records.');
-          if (normalizedRole === 'tenant') await refreshTenant();
-        }
-      } catch (error) {
-        const msg = error.response?.data?.message || error.message;
-        if (!cancelled) setPaymentSyncMessage(typeof msg === 'string' ? msg : 'Could not confirm payment.');
-      } finally {
-        if (!cancelled) {
-          navigate('/dashboard', { replace: true });
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [location.search, navigate, normalizedRole]);
-
-  useEffect(() => {
-    if (activeItem !== 'records') return;
-    let cancelled = false;
-    (async () => {
-      try {
-        if (normalizedRole === 'tenant') {
-          setPaymentRecords(await getTenantPaymentRecords());
-        } else if (normalizedRole === 'landlord') {
-          setPaymentRecords(await getLandlordPaymentRecords());
-        } else {
-          setPaymentRecords([]);
-        }
-      } catch {
-        if (!cancelled) setPaymentRecords([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [activeItem, normalizedRole]);
-
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -225,9 +157,6 @@ const Dashboard = () => {
   };
   const handleMenuSelect = (key) => {
     setActiveItem(key);
-    setPaymentSyncMessage('');
-    setPaymentChoiceOpen(false);
-    setCashPaymentNotice('');
     setShowActions(false);
     setSelectedPropertyId(null);
     setSelectedRoomId(null);
@@ -282,41 +211,6 @@ const Dashboard = () => {
       setEnrollMessage(error.response?.data?.message || 'Invalid or expired code.');
     }
   };
-  const openPaymentChoice = () => {
-    if (tenantRent?.currentInvoiceStatus === 'PAID') return;
-    setPaymentError('');
-    setCashPaymentNotice('');
-    setPaymentChoiceOpen(true);
-  };
-
-  const runOnlineCheckout = async () => {
-    if (tenantRent?.currentInvoiceStatus === 'PAID') return;
-    setPaymentChoiceOpen(false);
-    setPaymentError('');
-    setPaymentLoading(true);
-    try {
-      const origin = window.location.origin;
-      const { redirectUrl } = await createPaymongoCheckout({
-        paymentMethod: 'gcash',
-        returnUrl: `${origin}/dashboard?payment=complete`
-      });
-      if (redirectUrl) window.location.assign(redirectUrl);
-      else setPaymentError('No redirect URL returned from PayMongo.');
-    } catch (error) {
-      const msg = error.response?.data?.message || error.response?.data?.error || error.message;
-      setPaymentError(typeof msg === 'string' ? msg : 'Payment could not be started.');
-    } finally {
-      setPaymentLoading(false);
-    }
-  };
-
-  const selectCashPayment = () => {
-    setPaymentChoiceOpen(false);
-    setCashPaymentNotice(
-      'Cash payment: pay your landlord in person. This app only tracks online (GCash/Maya) payments automatically.'
-    );
-  };
-
   const handleConfirmDelete = async () => {
     if (confirmDelete.type === 'property') {
       await deleteProperty(confirmDelete.id);
@@ -335,24 +229,6 @@ const Dashboard = () => {
   const isLandlordProperties = normalizedRole === 'landlord' && activeItem === 'properties' && !isCreatePropertyPage && !isCreateRoomPage;
   const isLandlordTenants = normalizedRole === 'landlord' && activeItem === 'tenants';
   const isTenantRent = normalizedRole === 'tenant' && activeItem === 'rent';
-  const isRecords = activeItem === 'records' && (normalizedRole === 'tenant' || normalizedRole === 'landlord');
-
-  const formatRecordedAt = (v) => {
-    if (v == null) return '-';
-    if (Array.isArray(v)) {
-      const [y, mo, d, h = 0, mi = 0, s = 0] = v;
-      const dt = new Date(y, mo - 1, d, h, mi, s);
-      return Number.isNaN(dt.getTime()) ? String(v) : dt.toLocaleString();
-    }
-    const d = new Date(v);
-    return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleString();
-  };
-
-  const formatMoney = (n) => {
-    if (n == null || n === '') return '-';
-    const x = Number(n);
-    return Number.isNaN(x) ? String(n) : `₱${x.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
 
   return (
     <div className="dashboard-layout">
@@ -389,45 +265,7 @@ const Dashboard = () => {
         ) : (
           <div className="dashboard-card">
             <h2>{menuItems.find((item) => item.key === activeItem)?.label}</h2>
-            {paymentSyncMessage ? (
-              <p className="payment-sync-notice" role="status">{paymentSyncMessage}</p>
-            ) : null}
-            {isRecords ? (
-              <div className="payment-records-section">
-                {paymentRecords.length ? (
-                  <table className="payment-records-table">
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        {normalizedRole === 'landlord' ? <th>Tenant</th> : <th>Landlord</th>}
-                        <th>Property</th>
-                        <th>Room</th>
-                        <th>Amount</th>
-                        <th>Method</th>
-                        <th>Status</th>
-                        <th>PayMongo ref.</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {paymentRecords.map((row) => (
-                        <tr key={row.id}>
-                          <td>{formatRecordedAt(row.recordedAt)}</td>
-                          <td>{normalizedRole === 'landlord' ? row.tenantName : row.landlordName}</td>
-                          <td>{row.propertyName}</td>
-                          <td>{row.roomNumber}</td>
-                          <td>{formatMoney(row.amountPesos)} {row.currency || 'PHP'}</td>
-                          <td>{row.paymentMethodType || '-'}</td>
-                          <td>{row.paymongoStatus || '-'}</td>
-                          <td className="payment-ref-cell"><code>{row.paymongoPaymentIntentId}</code></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : (
-                  <p>No payment records yet.</p>
-                )}
-              </div>
-            ) : isLandlordProperties ? (
+            {isLandlordProperties ? (
               selectedProperty ? (
                 <section className="property-details-view">
                   <div className="property-column property-column-left">
@@ -546,20 +384,7 @@ const Dashboard = () => {
                     <p><strong>Status:</strong> {formatRentStatus(tenantRent.currentInvoiceStatus)}</p>
                     <p><strong>Days left in billing month:</strong> {tenantRent.currentRemainingDaysInBillingMonth ?? '-'}</p>
                     <p><strong>Amount:</strong> {tenantRent.currentInvoiceAmount ?? '-'}</p>
-                    {paymentError ? <p className="payment-error" role="alert">{paymentError}</p> : null}
-                    {cashPaymentNotice ? (
-                      <p className="cash-payment-notice" role="status">
-                        {cashPaymentNotice}
-                      </p>
-                    ) : null}
-                    <button
-                      type="button"
-                      className="primary-btn"
-                      onClick={openPaymentChoice}
-                      disabled={paymentLoading || rentPaidForCurrentMonth}
-                    >
-                      {paymentLoading ? 'Redirecting…' : rentPaidForCurrentMonth ? 'Paid for this month' : 'Pay Now'}
-                    </button>
+                    <button type="button" className="primary-btn">Pay Now</button>
                   </div>
                 </div>
               ) : (
@@ -568,40 +393,13 @@ const Dashboard = () => {
                   {enrollMessage ? <p>{enrollMessage}</p> : null}
                 </div>
               )
-            ) : <p>This section is not available.</p>}
+            ) : <p>This is your {activeItem} section. You can now add page content for this menu option.</p>}
           </div>
         )}
 
         {isLandlordProperties ? <div className="fab-wrapper">{showActions ? <div className="fab-menu"><button type="button" className="fab-option" onClick={() => navigate('/dashboard/properties/new')}>Add Property</button><button type="button" className="fab-option" onClick={() => navigate('/dashboard/rooms/new')} disabled={!properties.length}>Add Room</button></div> : null}<button type="button" className="fab-main" onClick={() => setShowActions((prev) => !prev)} aria-label="Open create menu">+</button></div> : null}
 
         {confirmDelete.open ? <div className="confirm-modal-backdrop"><div className="confirm-modal"><h3>Confirm Deletion</h3><p>{confirmDelete.type === 'property' ? 'Are you sure you want to delete this property and all associated rooms?' : 'Are you sure you want to delete this room?'}</p><div className="confirm-modal-actions"><button type="button" className="secondary-btn" onClick={() => setConfirmDelete({ open: false, type: '', id: null })}>Cancel</button><button type="button" className="danger-btn" onClick={handleConfirmDelete}>Yes, Delete</button></div></div></div> : null}
-
-        {paymentChoiceOpen ? (
-          <div className="confirm-modal-backdrop">
-            <div className="confirm-modal payment-choice-modal" role="dialog" aria-labelledby="payment-choice-title">
-              <h3 id="payment-choice-title">Payment method</h3>
-              <p className="payment-choice-hint">
-                Amount is your room&apos;s monthly rate from the server. PayMongo uses centavos (rate × 100), e.g. ₱
-                {tenantRent?.monthlyRate != null ? Number(tenantRent.monthlyRate).toLocaleString('en-PH') : '—'} →{' '}
-                {tenantRent?.monthlyRate != null
-                  ? `${(Math.round(Number(tenantRent.monthlyRate) * 100)).toLocaleString('en-PH')} centavos`
-                  : '—'}
-                .
-              </p>
-              <div className="payment-choice-actions">
-                <button type="button" className="primary-btn" onClick={runOnlineCheckout} disabled={paymentLoading}>
-                  Online (GCash / Maya)
-                </button>
-                <button type="button" className="secondary-btn" onClick={selectCashPayment}>
-                  Cash
-                </button>
-                <button type="button" className="secondary-btn" onClick={() => setPaymentChoiceOpen(false)}>
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : null}
       </main>
     </div>
   );
