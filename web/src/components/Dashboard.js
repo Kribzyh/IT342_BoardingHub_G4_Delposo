@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import RoleSidebar from './layout/RoleSidebar';
 import {
@@ -19,41 +19,6 @@ import {
   updateProperty,
   updateRoom
 } from '../services/dashboard';
-
-const LANDLORD_SELECTION_KEY = 'boardinghub_landlord_selection';
-
-/** Parse Spring/Jackson LocalDateTime (ISO string or array). */
-function parseServerDateTime(v) {
-  if (v == null) return null;
-  if (Array.isArray(v)) {
-    const [y, mo, d, h = 0, mi = 0, s = 0] = v;
-    const dt = new Date(y, mo - 1, d, h, mi, s);
-    return Number.isNaN(dt.getTime()) ? null : dt;
-  }
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
-function isEnrollmentCodeActive(room) {
-  if (!room?.enrollmentCode) return false;
-  const exp = parseServerDateTime(room.enrollmentExpiresAt);
-  if (!exp) return false;
-  return exp.getTime() > Date.now();
-}
-
-/** _refreshTick forces re-computation while a code is active (1s interval). */
-function formatEnrollmentTimeRemaining(expiresAt, _refreshTick = 0) {
-  void _refreshTick;
-  const exp = parseServerDateTime(expiresAt);
-  if (!exp) return '';
-  const ms = exp.getTime() - Date.now();
-  if (ms <= 0) return 'expired';
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  const rs = s % 60;
-  if (m >= 1) return `${m}m ${rs}s`;
-  return `${rs}s`;
-}
 
 const Dashboard = () => {
   const user = JSON.parse(localStorage.getItem('user')) || {};
@@ -93,17 +58,6 @@ const Dashboard = () => {
   const [paymentSyncMessage, setPaymentSyncMessage] = useState('');
   const [paymentChoiceOpen, setPaymentChoiceOpen] = useState(false);
   const [cashPaymentNotice, setCashPaymentNotice] = useState('');
-  const [generatingRoomCode, setGeneratingRoomCode] = useState(false);
-  const [codeCountdownTick, setCodeCountdownTick] = useState(0);
-  const landlordHydratedRef = useRef(false);
-  const prevNormalizedRoleRef = useRef(normalizedRole);
-
-  useEffect(() => {
-    if (prevNormalizedRoleRef.current !== normalizedRole) {
-      landlordHydratedRef.current = false;
-      prevNormalizedRoleRef.current = normalizedRole;
-    }
-  }, [normalizedRole]);
 
   const selectedProperty = properties.find((p) => p.id === selectedPropertyId);
   const propertyRooms = selectedProperty?.rooms || [];
@@ -187,45 +141,6 @@ const Dashboard = () => {
   useEffect(() => {
     if (normalizedRole === 'landlord') refreshLandlord();
   }, [normalizedRole]);
-
-  useLayoutEffect(() => {
-    if (normalizedRole !== 'landlord' || !properties.length || landlordHydratedRef.current) return;
-    landlordHydratedRef.current = true;
-    try {
-      const raw = sessionStorage.getItem(LANDLORD_SELECTION_KEY);
-      if (!raw) return;
-      const data = JSON.parse(raw);
-      if (data.activeItem) setActiveItem(data.activeItem);
-      if (data.propertyId == null) return;
-      const prop = properties.find((p) => p.id === data.propertyId);
-      if (!prop) return;
-      setSelectedPropertyId(data.propertyId);
-      const rooms = prop.rooms || [];
-      if (data.roomId != null && rooms.some((r) => r.id === data.roomId)) {
-        setSelectedRoomId(data.roomId);
-      } else if (rooms.length) {
-        setSelectedRoomId(rooms[0].id);
-      }
-    } catch {
-      /* ignore */
-    }
-  }, [normalizedRole, properties]);
-
-  useEffect(() => {
-    if (normalizedRole !== 'landlord' || !landlordHydratedRef.current) return;
-    try {
-      sessionStorage.setItem(
-        LANDLORD_SELECTION_KEY,
-        JSON.stringify({
-          activeItem,
-          propertyId: selectedPropertyId,
-          roomId: selectedRoomId
-        })
-      );
-    } catch {
-      /* ignore */
-    }
-  }, [normalizedRole, activeItem, selectedPropertyId, selectedRoomId]);
   useEffect(() => {
     if (normalizedRole === 'tenant' && activeItem === 'rent') refreshTenant();
   }, [activeItem, normalizedRole]);
@@ -254,12 +169,6 @@ const Dashboard = () => {
   useEffect(() => {
     if (!selectedRoomId && propertyRooms.length) setSelectedRoomId(propertyRooms[0].id);
   }, [propertyRooms, selectedRoomId]);
-
-  useEffect(() => {
-    if (!selectedRoom?.enrollmentCode || !selectedRoom?.enrollmentExpiresAt) return;
-    const id = setInterval(() => setCodeCountdownTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
-  }, [selectedRoom?.enrollmentCode, selectedRoom?.enrollmentExpiresAt, selectedRoomId]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -358,14 +267,8 @@ const Dashboard = () => {
     setProperties((prev) => prev.map((p) => ({ ...p, rooms: (p.rooms || []).map((r) => (r.id === selectedRoomId ? { ...r, [field]: field === 'monthlyRate' ? Number(value) : value } : r)) })));
   const handleGenerateCode = async () => {
     if (!selectedRoom) return;
-    if (isEnrollmentCodeActive(selectedRoom)) return;
-    setGeneratingRoomCode(true);
-    try {
-      await generateRoomCode(selectedRoom.id);
-      await refreshLandlord();
-    } finally {
-      setGeneratingRoomCode(false);
-    }
+    await generateRoomCode(selectedRoom.id);
+    await refreshLandlord();
   };
   const handleEnroll = async (e) => {
     e.preventDefault();
@@ -479,6 +382,7 @@ const Dashboard = () => {
               <input id="roomNumber" value={roomForm.roomNumber} onChange={(e) => setRoomForm({ ...roomForm, roomNumber: e.target.value })} required />
               <label htmlFor="monthlyRate">Monthly Rate</label>
               <input id="monthlyRate" type="number" min="1" value={roomForm.monthlyRate} onChange={(e) => setRoomForm({ ...roomForm, monthlyRate: e.target.value })} required />
+              <label htmlFor="roomStatus">Status</label><input id="roomStatus" value="AVAILABLE" readOnly />
               <div className="form-actions"><button type="button" className="secondary-btn" onClick={() => navigate('/dashboard')}>Cancel</button><button type="submit" className="primary-btn">Save Room</button></div>
             </form>
           </section>
@@ -544,39 +448,7 @@ const Dashboard = () => {
                           <label>Monthly Rate<input type="number" value={selectedRoom.monthlyRate} onChange={(e) => handleRoomField('monthlyRate', e.target.value)} readOnly={!isEditingRooms} /></label>
                           <label>Status<input value={selectedRoom.status} readOnly /></label>
                         </div>
-                        {selectedRoom.status === 'AVAILABLE' ? (
-                          <div className="room-code-box">
-                            <button
-                              type="button"
-                              className="secondary-btn"
-                              onClick={handleGenerateCode}
-                              disabled={
-                                generatingRoomCode ||
-                                isEnrollmentCodeActive(selectedRoom)
-                              }
-                            >
-                              {generatingRoomCode
-                                ? 'Generating…'
-                                : isEnrollmentCodeActive(selectedRoom)
-                                  ? 'Code active'
-                                  : 'Generate 9-digit Code'}
-                            </button>
-                            {isEnrollmentCodeActive(selectedRoom) ? (
-                              <p>
-                                Code: <strong>{selectedRoom.enrollmentCode}</strong>
-                                <span className="room-code-expiry">
-                                  {' '}
-                                  (time left:{' '}
-                                  {formatEnrollmentTimeRemaining(
-                                    selectedRoom.enrollmentExpiresAt,
-                                    codeCountdownTick
-                                  )}
-                                  )
-                                </span>
-                              </p>
-                            ) : null}
-                          </div>
-                        ) : null}
+                        {selectedRoom.status === 'AVAILABLE' ? <div className="room-code-box"><button type="button" className="secondary-btn" onClick={handleGenerateCode}>Generate 9-digit Code</button>{selectedRoom.enrollmentCode ? <p>Code: <strong>{selectedRoom.enrollmentCode}</strong> (expires in 5 minutes)</p> : null}</div> : null}
                         {selectedRoom.tenant ? <div className="tenant-thumb-list"><h5>Tenant</h5><button type="button" className="tenant-thumb active">{selectedRoom.tenant.fullName}</button></div> : null}
                       </>
                     ) : <p>Select a room to view details.</p>}
