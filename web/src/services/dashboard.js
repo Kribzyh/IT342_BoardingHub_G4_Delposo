@@ -72,11 +72,7 @@ export const createPaymongoCheckout = async (payload = {}) => {
 };
 
 export const completePaymongoPayment = async (paymentIntentId) => {
-  const response = await api.post(
-    '/payments/paymongo/complete',
-    { paymentIntentId },
-    { timeout: 60000 }
-  );
+  const response = await api.post('/payments/paymongo/complete', { paymentIntentId });
   return response.data;
 };
 

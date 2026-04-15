@@ -56,24 +56,6 @@ function formatEnrollmentTimeRemaining(expiresAt, _refreshTick = 0) {
   return `${rs}s`;
 }
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-const PAYMENT_COMPLETE_INITIAL_DELAY_MS = 2000;
-const PAYMENT_COMPLETE_RETRY_DELAY_MS = 3000;
-const PAYMENT_COMPLETE_MAX_ATTEMPTS = 6;
-
-function isRetryablePaymentCompleteError(error) {
-  if (!error) return false;
-  const msg = String(error.response?.data?.message || error.message || '');
-  if (error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED') return true;
-  if (error.message === 'Network Error') return true;
-  if (!error.response) return true;
-  const st = error.response.status;
-  if (st === 502 || st === 503 || st === 504) return true;
-  if (st === 400 && (msg.includes('not successful yet') || msg.includes('Try again'))) return true;
-  return false;
-}
-
 const Dashboard = () => {
   const user = JSON.parse(localStorage.getItem('user')) || {};
   const navigate = useNavigate();
@@ -100,10 +82,6 @@ const Dashboard = () => {
   const [isEditingRooms, setIsEditingRooms] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState({ open: false, type: '', id: null });
   const [tenantRent, setTenantRent] = useState(null);
-  /** True until first getTenantRent attempt finishes; avoids showing Enroll before we know enrollment status. */
-  const [tenantRentLoading, setTenantRentLoading] = useState(
-    () => normalizedRole === 'tenant'
-  );
   const [showEnrollForm, setShowEnrollForm] = useState(false);
   const [enrollCode, setEnrollCode] = useState('');
   const [enrollMessage, setEnrollMessage] = useState('');
@@ -111,7 +89,6 @@ const Dashboard = () => {
   const [landlordTenants, setLandlordTenants] = useState([]);
   const [selectedTenantKey, setSelectedTenantKey] = useState('');
   const [paymentLoading, setPaymentLoading] = useState(false);
-  const [paymentConfirming, setPaymentConfirming] = useState(false);
   const [paymentError, setPaymentError] = useState('');
   const [paymentRecords, setPaymentRecords] = useState([]);
   const [paymentSyncMessage, setPaymentSyncMessage] = useState('');
@@ -120,7 +97,6 @@ const Dashboard = () => {
   const [generatingRoomCode, setGeneratingRoomCode] = useState(false);
   const [codeCountdownTick, setCodeCountdownTick] = useState(0);
   const landlordHydratedRef = useRef(false);
-  const tenantRentPrefetchRef = useRef(false);
   const prevNormalizedRoleRef = useRef(normalizedRole);
 
   useEffect(() => {
@@ -194,16 +170,12 @@ const Dashboard = () => {
     }
   };
 
-  const refreshTenant = async (opts = {}) => {
-    const silent = Boolean(opts.silent);
-    if (!silent) setTenantRentLoading(true);
+  const refreshTenant = async () => {
     try {
       const rent = await getTenantRent();
       setTenantRent({ ...rent, ...(await fetchOptionalInvoiceFields(rent)) });
     } catch {
       setTenantRent(null);
-    } finally {
-      if (!silent) setTenantRentLoading(false);
     }
   };
   const refreshLandlordTenants = async (propertyId) => {
@@ -272,15 +244,7 @@ const Dashboard = () => {
     }
   }, [normalizedRole, activeItem, selectedPropertyId, selectedRoomId]);
   useEffect(() => {
-    if (normalizedRole !== 'tenant') {
-      tenantRentPrefetchRef.current = false;
-      return;
-    }
-    const onRentTab = activeItem === 'rent';
-    if (onRentTab || !tenantRentPrefetchRef.current) {
-      if (!tenantRentPrefetchRef.current) tenantRentPrefetchRef.current = true;
-      refreshTenant();
-    }
+    if (normalizedRole === 'tenant' && activeItem === 'rent') refreshTenant();
   }, [activeItem, normalizedRole]);
   useEffect(() => {
     if (normalizedRole === 'landlord' && activeItem === 'tenants') {
@@ -319,50 +283,25 @@ const Dashboard = () => {
     if (params.get('payment') !== 'complete') return;
     const pi = params.get('payment_intent_id');
     if (!pi) return;
-    setPaymentConfirming(true);
     let cancelled = false;
     (async () => {
       try {
-        await sleep(PAYMENT_COMPLETE_INITIAL_DELAY_MS);
-        if (cancelled) return;
-        for (let attempt = 0; attempt < PAYMENT_COMPLETE_MAX_ATTEMPTS; attempt++) {
-          if (cancelled) return;
-          try {
-            const res = await completePaymongoPayment(pi);
-            if (!cancelled) {
-              setPaymentSyncMessage(res.message || 'Payment saved to your records.');
-              if (normalizedRole === 'tenant') await refreshTenant({ silent: true });
-            }
-            break;
-          } catch (error) {
-            const retry = isRetryablePaymentCompleteError(error) && attempt < PAYMENT_COMPLETE_MAX_ATTEMPTS - 1;
-            if (retry) {
-              await sleep(PAYMENT_COMPLETE_RETRY_DELAY_MS);
-              continue;
-            }
-            const msg = error.response?.data?.message || error.message;
-            if (!cancelled) {
-              if (isRetryablePaymentCompleteError(error)) {
-                setPaymentSyncMessage(
-                  'Payment may still be finalizing. Check Rent or Records in a minute, or try again.'
-                );
-              } else {
-                setPaymentSyncMessage(typeof msg === 'string' ? msg : 'Could not confirm payment.');
-              }
-            }
-            break;
-          }
+        const res = await completePaymongoPayment(pi);
+        if (!cancelled) {
+          setPaymentSyncMessage(res.message || 'Payment saved to your records.');
+          if (normalizedRole === 'tenant') await refreshTenant();
         }
+      } catch (error) {
+        const msg = error.response?.data?.message || error.message;
+        if (!cancelled) setPaymentSyncMessage(typeof msg === 'string' ? msg : 'Could not confirm payment.');
       } finally {
         if (!cancelled) {
-          setPaymentConfirming(false);
           navigate('/dashboard', { replace: true });
         }
       }
     })();
     return () => {
       cancelled = true;
-      setPaymentConfirming(false);
     };
   }, [location.search, navigate, normalizedRole]);
 
@@ -742,12 +681,16 @@ const Dashboard = () => {
                 )}
               </div>
             ) : isTenantRent ? (
-              tenantRentLoading ? (
-                <div className="tenant-rent-loading" role="status" aria-live="polite">
-                  <p>Loading your rent details…</p>
-                </div>
-              ) : tenantRent ? (
+              tenantRent ? (
                 <div className="tenant-rent-view">
+                  <div className="tenant-rent-column">
+                    <h3>Boarding House Details</h3>
+                    <p><strong>Property:</strong> {tenantRent.propertyName}</p>
+                    <p><strong>Address:</strong> {tenantRent.propertyAddress}</p>
+                    <p><strong>Room:</strong> {tenantRent.roomNumber}</p>
+                    <p><strong>Monthly Rate:</strong> {tenantRent.monthlyRate}</p>
+                    <p><strong>Enrolled Date:</strong> {tenantRent.enrolledAt ? new Date(tenantRent.enrolledAt).toLocaleString() : '-'}</p>
+                  </div>
                   <div className="tenant-rent-column">
                     <h3>This Month&apos;s Payment</h3>
                     <p><strong>Billing Month:</strong> {tenantRent.currentBillingMonth || '-'}</p>
@@ -764,25 +707,10 @@ const Dashboard = () => {
                       type="button"
                       className="primary-btn"
                       onClick={openPaymentChoice}
-                      disabled={paymentLoading || paymentConfirming || rentPaidForCurrentMonth}
-                      aria-busy={paymentConfirming || paymentLoading}
+                      disabled={paymentLoading || rentPaidForCurrentMonth}
                     >
-                      {paymentConfirming
-                        ? 'Checking payment…'
-                        : paymentLoading
-                          ? 'Redirecting…'
-                          : rentPaidForCurrentMonth
-                            ? 'Paid for this month'
-                            : 'Pay Now'}
+                      {paymentLoading ? 'Redirecting…' : rentPaidForCurrentMonth ? 'Paid for this month' : 'Pay Now'}
                     </button>
-                  </div>
-                  <div className="tenant-rent-column">
-                    <h3>Boarding House Details</h3>
-                    <p><strong>Property:</strong> {tenantRent.propertyName}</p>
-                    <p><strong>Address:</strong> {tenantRent.propertyAddress}</p>
-                    <p><strong>Room:</strong> {tenantRent.roomNumber}</p>
-                    <p><strong>Monthly Rate:</strong> {tenantRent.monthlyRate}</p>
-                    <p><strong>Enrolled Date:</strong> {tenantRent.enrolledAt ? new Date(tenantRent.enrolledAt).toLocaleString() : '-'}</p>
                   </div>
                 </div>
               ) : (
