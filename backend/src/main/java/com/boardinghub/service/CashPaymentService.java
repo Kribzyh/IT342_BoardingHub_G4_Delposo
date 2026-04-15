@@ -74,35 +74,6 @@ public class CashPaymentService {
         return new TenantCashStatusResponse(pending);
     }
 
-    /**
-     * When a PayMongo (GCash/Maya) payment succeeds, remove any pending cash request for that tenant
-     * so the landlord is not left with a stale review item.
-     */
-    public void removePendingCashRequestAfterOnlinePayment(User tenant) {
-        try {
-            cashPaymentRequestRepository
-                    .findByTenantAndStatus(tenant, CashPaymentRequest.Status.PENDING)
-                    .ifPresent(this::deleteCashRequestAndAttachedPhoto);
-        } catch (Exception ignored) {
-            /* do not fail payment completion */
-        }
-    }
-
-    private void deleteCashRequestAndAttachedPhoto(CashPaymentRequest req) {
-        String fn = req.getPhotoFileName();
-        if (fn != null && !fn.isBlank()) {
-            try {
-                Path file = cashUploadPath.resolve(fn).normalize();
-                if (file.startsWith(cashUploadPath)) {
-                    Files.deleteIfExists(file);
-                }
-            } catch (IOException ignored) {
-                /* ignore */
-            }
-        }
-        cashPaymentRequestRepository.delete(req);
-    }
-
     @Transactional
     public void submitCashRequest(String email, String description, MultipartFile photo) {
         User tenant = requireTenant(email);

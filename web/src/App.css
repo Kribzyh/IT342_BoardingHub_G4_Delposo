@@ -209,28 +209,6 @@
   color: #0b2f6b;
 }
 
-/* Payment pill sits inside the same bordered thumb as the name */
-.tenant-thumb-inner {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  width: 100%;
-}
-
-.tenant-thumb-inner .tenant-thumb-name {
-  flex: 1;
-  min-width: 0;
-  text-align: left;
-  font-weight: 600;
-}
-
-.tenant-thumb-inner .tenant-list-payment {
-  margin-top: 0;
-  flex-shrink: 0;
-}
-
 .tenant-detail-card {
   border: 1px solid #94a3b8;
   border-radius: 8px;
