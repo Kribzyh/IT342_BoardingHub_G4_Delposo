@@ -5,6 +5,7 @@ import Register from './components/auth/Register';
 import Dashboard from './components/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
+import OAuth2Redirect from './components/auth/OAuth2Redirect';
 import './App.css';
 
 function App() {
@@ -37,6 +38,10 @@ function App() {
                 <Dashboard />
               </ProtectedRoute>
             }
+          />
+          <Route
+            path="/oauth2/redirect"
+            element={<OAuth2Redirect />}
           />
           <Route
             path="/"

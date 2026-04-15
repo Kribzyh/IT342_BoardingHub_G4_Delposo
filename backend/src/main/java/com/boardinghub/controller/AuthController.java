@@ -14,6 +14,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/auth")
@@ -64,6 +67,45 @@ public class AuthController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(401).body("Invalid email or password");
+        }
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<?> googleLogin(@RequestBody Map<String, String> request) {
+        String token = request.get("token");
+        if (token == null || token.isBlank()) {
+            return ResponseEntity.badRequest().body("Missing Google token");
+        }
+
+        RestTemplate restTemplate = new RestTemplate();
+        String url = "https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=" + token;
+        try {
+            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
+            Map<String, Object> attributes = response.getBody();
+            if (attributes == null || attributes.get("email") == null) {
+                return ResponseEntity.status(401).body("Invalid Google token");
+            }
+
+            String email = (String) attributes.get("email");
+            String name = (String) attributes.getOrDefault("name", email);
+
+            User user = userRepository.findByEmail(email).orElse(null);
+            if (user == null) {
+                user = new User();
+                user.setEmail(email);
+                user.setFullName(name);
+                user.setPassword("");
+                user.setRole(User.Role.TENANT);
+                user = userRepository.save(user);
+            }
+
+            String jwt = jwtUtil.generateToken(user.getEmail());
+            AuthResponse.UserDto userDto = new AuthResponse.UserDto(
+                    user.getId(), user.getEmail(), user.getFullName(), user.getRole());
+            AuthResponse authResponse = new AuthResponse(jwt, null, userDto);
+            return ResponseEntity.ok(authResponse);
+        } catch (Exception e) {
+            return ResponseEntity.status(401).body("Invalid Google token");
         }
     }
 }

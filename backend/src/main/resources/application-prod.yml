@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${SUPABASE_HOST}:${SUPABASE_PORT}/${SUPABASE_DB}?sslmode=require
+    username: ${SUPABASE_USER}
+    password: ${SUPABASE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: 3600000
+
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://boardinghub.example.com}
