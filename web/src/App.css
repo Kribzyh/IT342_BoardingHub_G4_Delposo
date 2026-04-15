@@ -40,7 +40,7 @@
 .dashboard-layout {
   display: flex;
   min-height: 100vh;
-  background: #e2e8f0;
+  background: #f4f7fb;
 }
 
 .dashboard-content {
@@ -55,12 +55,10 @@
 
 .dashboard-card {
   margin-top: 22px;
-  background: #f8fafc;
+  background: #ffffff;
   border-radius: 12px;
   padding: 20px;
-  border: 1px solid #cbd5e1;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.14);
-  color: #0f172a;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08);
 }
 
 .properties-grid {
@@ -70,20 +68,19 @@
 }
 
 .property-item {
-  border: 1px solid #94a3b8;
+  border: 1px solid #dbe3f0;
   border-radius: 10px;
   padding: 12px;
   position: relative;
   cursor: pointer;
-  background: #ffffff;
 }
 
 .property-thumb {
   width: 100%;
   min-height: 80px;
   border-radius: 8px;
-  background: #c7d2fe;
-  color: #1e293b;
+  background: #e7eefb;
+  color: #16325c;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -96,7 +93,6 @@
 .property-address,
 .property-meta {
   margin: 8px 0 0;
-  color: #1e293b;
 }
 
 .property-details-view h3 {
@@ -110,17 +106,16 @@
 }
 
 .property-column {
-  border: 1px solid #94a3b8;
+  border: 1px solid #e5e7eb;
   border-radius: 10px;
   min-height: 430px;
   padding: 12px;
   display: flex;
   flex-direction: column;
-  background: #ffffff;
 }
 
 .property-column-right {
-  background: #f1f5f9;
+  background: #f8fafc;
 }
 
 .property-rooms-list {
@@ -132,21 +127,18 @@
 }
 
 .room-list-item {
-  border: 1px solid #94a3b8;
+  border: 1px solid #dbe3f0;
   border-radius: 8px;
   background: #ffffff;
   display: flex;
   justify-content: space-between;
   padding: 10px;
   cursor: pointer;
-  color: #0f172a;
-  font-weight: 600;
 }
 
 .room-list-item.active {
-  border-color: #1e40af;
-  background: #dbeafe;
-  color: #0b2f6b;
+  border-color: #1d4ed8;
+  background: #eff6ff;
 }
 
 .room-item {
@@ -164,7 +156,7 @@
 }
 
 .room-item input {
-  border: 1px solid #64748b;
+  border: 1px solid #dbe3f0;
   border-radius: 8px;
   padding: 8px;
 }
@@ -193,28 +185,23 @@
 
 .tenant-thumb {
   width: 100%;
-  border: 1px solid #64748b;
+  border: 1px solid #dbe3f0;
   border-radius: 8px;
   background: #ffffff;
   padding: 10px;
   cursor: pointer;
   text-align: left;
-  color: #0f172a;
-  font-weight: 600;
 }
 
 .tenant-thumb.active {
-  border-color: #1e40af;
-  background: #dbeafe;
-  color: #0b2f6b;
+  border-color: #1d4ed8;
+  background: #eff6ff;
 }
 
 .tenant-detail-card {
-  border: 1px solid #94a3b8;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   padding: 10px;
-  background: #ffffff;
-  color: #0f172a;
 }
 
 .tenant-tab-layout {
@@ -241,23 +228,20 @@
   text-align: left;
   padding: 10px;
   cursor: pointer;
-  color: #0f172a;
 }
 
 .tenant-list-item.active {
   border-color: #1d4ed8;
-  background: #dbeafe;
-  color: #0b2f6b;
+  background: #eff6ff;
 }
 
 .tenant-list-name {
   font-weight: 600;
-  color: #0f172a;
 }
 
 .tenant-list-meta {
   margin-top: 4px;
-  color: #1e293b;
+  color: #334155;
 }
 
 .tenant-detail-column {
@@ -274,14 +258,14 @@
 }
 
 .tenant-rent-column {
-  border: 1px solid #94a3b8;
+  border: 1px solid #e5e7eb;
   border-radius: 10px;
   min-height: 320px;
   padding: 14px;
 }
 
 .tenant-rent-column-blank {
-  background: #0f172a;
+  background: #000000;
 }
 
 .tenant-enroll-form {
@@ -304,7 +288,7 @@
 }
 
 .tenant-enroll-form input {
-  border: 1px solid #64748b;
+  border: 1px solid #dbe3f0;
   border-radius: 8px;
   padding: 10px;
 }
@@ -350,7 +334,6 @@
   background: #ffffff;
   padding: 10px 12px;
   cursor: pointer;
-  color: #0f172a;
   box-shadow: 0 3px 10px rgba(2, 6, 23, 0.15);
 }
 
@@ -371,13 +354,13 @@
 }
 
 .property-form input {
-  border: 1px solid #64748b;
+  border: 1px solid #dbe3f0;
   border-radius: 8px;
   padding: 10px;
 }
 
 .property-form select {
-  border: 1px solid #64748b;
+  border: 1px solid #dbe3f0;
   border-radius: 8px;
   padding: 10px;
   background: #ffffff;
@@ -399,7 +382,7 @@
 }
 
 .primary-btn {
-  background: #1e40af;
+  background: #1d4ed8;
   color: #ffffff;
 }
 
@@ -409,8 +392,7 @@
 }
 
 .secondary-btn {
-  background: #cbd5e1;
-  color: #0f172a;
+  background: #e5e7eb;
 }
 
 .danger-btn {
@@ -418,7 +400,7 @@
   border-radius: 8px;
   padding: 10px 12px;
   cursor: pointer;
-  background: #b91c1c;
+  background: #dc2626;
   color: #ffffff;
 }
 
@@ -438,8 +420,6 @@
   border-radius: 12px;
   padding: 18px;
   box-shadow: 0 20px 40px rgba(2, 6, 23, 0.22);
-  border: 1px solid #94a3b8;
-  color: #0f172a;
 }
 
 .confirm-modal h3 {
